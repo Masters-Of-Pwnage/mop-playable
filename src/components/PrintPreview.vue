@@ -42,21 +42,21 @@
         </button>
 
         <!-- Cards Container -->
-        <div class="h-full w-full flex items-center justify-center px-16 bg-white max-w-[210mm] mx-auto py-[1cm]">
+        <div class="h-full w-full flex items-center justify-center px-8 bg-white max-w-[210mm] mx-auto py-4">
           <!-- Back Cards Page -->
-          <div v-if="currentPage % 2 === 0" class="grid grid-cols-2 gap-4 h-full">
+          <div v-if="currentPage % 2 === 0" class="grid grid-cols-3 gap-2 h-full">
             <template v-for="card in previewPages[currentPage]" :key="card.id">
-              <div class="aspect-[63/88] max-h-[calc((100vh-20rem)/3)] w-[6.3cm] h-[8.8cm]">
-                <img :src="backCardUrl" alt="Card Back" class="w-full h-full object-contain">
+              <div class="aspect-[63/88] w-[6.3cm] h-[8.8cm] rounded-md overflow-hidden">
+                <img :src="backCardUrl" alt="Card Back" class="w-full h-full object-cover">
               </div>
             </template>
           </div>
 
           <!-- Front Cards Page -->
-          <div v-else class="grid grid-cols-2 gap-4 h-full">
+          <div v-else class="grid grid-cols-3 gap-2 h-full">
             <template v-for="card in previewPages[currentPage]" :key="card.id">
-              <div class="aspect-[63/88] max-h-[calc((100vh-20rem)/3)] w-[6.3cm] h-[8.8cm]">
-                <img :src="getCardImageUrl(card)" :alt="card.name" class="w-full h-full object-contain">
+              <div class="aspect-[63/88] w-[6.3cm] h-[8.8cm] rounded-md overflow-hidden">
+                <img :src="getCardImageUrl(card)" :alt="card.name" class="w-full h-full object-cover">
               </div>
             </template>
           </div>
@@ -123,16 +123,14 @@ const props = defineProps({
 const CONFIG = {
   cardWidth: 63,
   cardHeight: 88,
-  margin: 10,
-  spacing: 10,
-  cardsPerPage: 6,
+  margin: 5,
+  spacing: 5,
+  cardsPerPage: 9,
 };
 
-// Reactive Data
 const backCardUrl = ref(backCardImage);
 const currentPage = ref(0);
 
-// Computed: Process cards into individual copies
 const allSelectedCards = computed(() => {
   const processed = [];
   for (const selectedCard of props.selectedCards) {
@@ -146,74 +144,70 @@ const allSelectedCards = computed(() => {
   return processed;
 });
 
-// Computed: Organize cards into pages for preview
 const previewPages = computed(() => {
   const cards = allSelectedCards.value;
   const pages = [];
 
   for (let i = 0; i < cards.length; i += CONFIG.cardsPerPage) {
     const pageCards = cards.slice(i, i + CONFIG.cardsPerPage);
-    pages.push(pageCards); // Back page
-    pages.push(pageCards); // Corresponding front page
+    pages.push(pageCards);
+    pages.push(pageCards);
   }
 
   return pages;
 });
 
-// Get card image URL
 const getCardImageUrl = (card) => {
   return card ? card.image || '' : '';
 };
 
-// Load Image
+// Rounded mask loader
 const loadImage = (url) => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
       const canvas = document.createElement('canvas');
+      const radius = 20;
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+      ctx.moveTo(radius, 0);
+      ctx.lineTo(canvas.width - radius, 0);
+      ctx.quadraticCurveTo(canvas.width, 0, canvas.width, radius);
+      ctx.lineTo(canvas.width, canvas.height - radius);
+      ctx.quadraticCurveTo(canvas.width, canvas.height, canvas.width - radius, canvas.height);
+      ctx.lineTo(radius, canvas.height);
+      ctx.quadraticCurveTo(0, canvas.height, 0, canvas.height - radius);
+      ctx.lineTo(0, radius);
+      ctx.quadraticCurveTo(0, 0, radius, 0);
+      ctx.closePath();
+      ctx.clip();
+
       ctx.drawImage(img, 0, 0);
 
-      try {
-        const dataUrl = canvas.toDataURL('image/png');
-        resolve(dataUrl);
-      } catch (e) {
-        reject(e);
-      }
+      const dataUrl = canvas.toDataURL('image/png');
+      resolve(dataUrl);
     };
-    img.onerror = (e) => {
-      console.error('Error loading image:', url, e);
-      reject(e);
-    };
+    img.onerror = () => resolve(null);
     img.src = url;
   });
 };
 
-// Generate PDF
 const generatePDF = async () => {
   try {
-    console.log('Starting PDF generation...');
     if (!props.selectedCards || props.selectedCards.length === 0) {
       alert('No cards selected for printing.');
       return;
     }
 
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-    });
-
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const { cardWidth, cardHeight, margin, spacing, cardsPerPage } = CONFIG;
 
-    // Load back card image
-    console.log('Loading back card image...');
     const backImgUrl = await loadImage(backCardUrl.value);
-    console.log('Back card image loaded');
-
     const cards = allSelectedCards.value;
     const totalPages = Math.ceil(cards.length / cardsPerPage);
 
@@ -222,41 +216,29 @@ const generatePDF = async () => {
       const endIdx = Math.min(startIdx + cardsPerPage, cards.length);
       const pageCards = cards.slice(startIdx, endIdx);
 
-      console.group(`Processing page ${pageNum + 1} (Cards ${startIdx + 1} to ${endIdx})`);
-      
-      // Add backs
-      console.log('Processing back page...');
       for (let i = 0; i < pageCards.length; i++) {
-        const row = Math.floor(i / 2);
-        const col = i % 2;
+        const row = Math.floor(i / 3);
+        const col = 2 - (i % 3);
         const x = margin + col * (cardWidth + spacing);
         const y = margin + row * (cardHeight + spacing);
-
         pdf.addImage(backImgUrl, 'PNG', x, y, cardWidth, cardHeight);
       }
 
-      // Add new page for fronts
       pdf.addPage();
 
-      // Add fronts
-      console.log('Processing front page...');
       for (let i = 0; i < pageCards.length; i++) {
         const card = pageCards[i];
-        const row = Math.floor(i / 2);
-        const col = i % 2;
+        const row = Math.floor(i / 3);
+        const col = i % 3;
         const x = margin + col * (cardWidth + spacing);
         const y = margin + row * (cardHeight + spacing);
-
         try {
           const frontImgUrl = await loadImage(getCardImageUrl(card));
           pdf.addImage(frontImgUrl, 'PNG', x, y, cardWidth, cardHeight);
         } catch (imgError) {
-          console.error('Error loading front image:', card.name, imgError);
           alert(`Failed to load image for card: ${card.name}`);
         }
       }
-
-      console.groupEnd();
 
       if (pageNum < totalPages - 1) {
         pdf.addPage();
@@ -271,13 +253,9 @@ const generatePDF = async () => {
       printScaling: 'none',
     });
 
-    console.log('Saving PDF...');
     pdf.save('cards.pdf');
   } catch (error) {
-    console.error('Error generating PDF:', error);
     alert('Error generating PDF. Please try again.');
   }
 };
 </script>
-
-
