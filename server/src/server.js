@@ -12,6 +12,7 @@ import { registerPackRoutes } from './api/packs.js';
 import { registerTradeRoutes } from './api/trades.js';
 import { applyFlagOverrides, registerAdmin } from './admin/admin.js';
 import { registerAdminCatalog } from './admin/catalog.js';
+import { registerAnimations } from './admin/animations.js';
 import { registerGoogleAuth } from './auth/google.js';
 import { purgeExpiredSessions, readSession, SESSION_COOKIE } from './auth/session.js';
 import { migrate, openDb } from './db.js';
@@ -87,6 +88,7 @@ export function createServer(overrides = {}) {
     registerPackRoutes(api, { db, config });
     registerAdminCatalog(api, { db, config });
     registerAdmin(api, { db, config, rooms });
+    registerAnimations(api, { db, config });
   });
 
   app.addHook('onRequest', async (req, reply) => {

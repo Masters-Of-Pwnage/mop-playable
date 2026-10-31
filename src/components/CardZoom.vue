@@ -2,7 +2,15 @@
   <UiModal :open="!!card" width="900px" @close="$emit('close')">
     <div v-if="card" class="flex flex-col gap-5 md:flex-row">
       <div class="mx-auto w-full max-w-[340px] shrink-0 md:w-[46%]">
-        <CardTile :card="card" size="full" eager :face-down="false" />
+        <CardTile :card="card" size="full" eager zoom :face-down="false" />
+        <label v-if="catalogFor(card.uid)?.animation" class="mt-2 flex items-center justify-center gap-2 text-xs muted">
+          Animações das cartas
+          <select v-model="settings.cardMotion" class="input py-0.5 text-xs">
+            <option value="sempre">sempre</option>
+            <option value="ampliar">só ao ampliar</option>
+            <option value="desligado">desligadas</option>
+          </select>
+        </label>
       </div>
       <div class="flex min-w-0 flex-1 flex-col gap-3">
         <div>
@@ -38,6 +46,8 @@ import CardTile from './CardTile.vue';
 import ManaPips from './ManaPips.vue';
 import { Kind, KEYWORD_NAMES } from '../engine/cards.js';
 import { COLOR_NAMES, ANY } from '../engine/mana.js';
+import { catalogFor } from '../stores/economy.js';
+import { settings } from '../stores/settings.js';
 
 const props = defineProps({ card: { type: Object, default: null }, extra: { type: String, default: '' } });
 defineEmits(['close']);

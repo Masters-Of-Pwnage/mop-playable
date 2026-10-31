@@ -1,4 +1,5 @@
 import { transaction } from '../db.js';
+import { approvedAnimations } from '../admin/animations.js';
 import { apiError } from '../errors.js';
 import { requireUser } from '../auth/session.js';
 import { effective, publicEntry, rarityDefaults, unavailableReason } from '../economy/catalog.js';
@@ -151,11 +152,12 @@ export function registerShopRoutes(app, { db, config }) {
     const defaults = rarityDefaults(db);
     const now = Date.now();
     const rows = db.prepare('SELECT * FROM card_catalog WHERE orphan = 0').all();
+    const animations = approvedAnimations(db, config);
     reply.header('Cache-Control', 'public, max-age=60');
     return {
       shopOpen: shopOpen(),
       rarities: Object.values(defaults).sort((a, b) => a.sort - b.sort).map((d) => ({ rarity: d.rarity, price: d.price_credits, sellPrice: d.sell_credits })),
-      cards: rows.map((r) => publicEntry(r, defaults, now)),
+      cards: rows.map((r) => ({ ...publicEntry(r, defaults, now), animation: animations.get(r.uid) || null })),
     };
   });
 

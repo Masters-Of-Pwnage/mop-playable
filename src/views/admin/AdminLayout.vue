@@ -30,6 +30,7 @@ const items = [
   { to: '/admin/trocas', label: 'Trocas' },
   { to: '/admin/codigos', label: 'Códigos' },
   { to: '/admin/pacotes', label: 'Pacotes' },
+  { to: '/admin/animacoes', label: 'Animações' },
   { to: '/admin/salas', label: 'Salas' },
   { to: '/admin/auditoria', label: 'Auditoria' },
   { to: '/admin/sistema', label: 'Sistema' },

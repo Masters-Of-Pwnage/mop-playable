@@ -5,7 +5,8 @@
     :class="[{ 'card-tile--tilt': tilt && !settings.reducedMotion, 'card-tile--glow': glow, 'card-tile--dim': dim, 'card-tile--still': settings.reducedMotion }, rarityClass]"
     :style="{ '--glow-color': glowColor }"
     @pointermove="onMove"
-    @pointerleave="reset"
+    @pointerenter="hovered = true"
+    @pointerleave="reset(); hovered = false"
   >
     <template v-if="faceDown"></template>
     <img v-else-if="src && !failed" :src="src" :alt="card?.name || 'Carta'" :loading="eager ? 'eager' : 'lazy'" decoding="async" draggable="false" @error="failed = true" @load="loaded = true" :class="{ 'opacity-0': !loaded && !eager }" class="transition-opacity duration-300" />
@@ -17,6 +18,7 @@
     <div v-if="faceDown" class="absolute inset-0">
       <img :src="back" alt="Verso da carta" draggable="false" />
     </div>
+    <CardArtMotion v-if="!faceDown && animation" :anim="animation" :active="zoom || hovered" :zoom="zoom" />
     <div class="card-tile__shine" aria-hidden="true"></div>
     <slot />
   </div>
@@ -27,6 +29,7 @@ import { computed, ref } from 'vue';
 import { backUrl, imageUrl } from '../stores/cards.js';
 import { settings } from '../stores/settings.js';
 import { catalogFor } from '../stores/economy.js';
+import CardArtMotion from './CardArtMotion.vue';
 
 const props = defineProps({
   card: { type: Object, default: null },
@@ -37,6 +40,8 @@ const props = defineProps({
   glowColor: { type: String, default: '#3dff7a' },
   dim: { type: Boolean, default: false },
   eager: { type: Boolean, default: false },
+  /** Card zoom dialog: the character animation plays without hovering. */
+  zoom: { type: Boolean, default: false },
 });
 
 const root = ref(null);
@@ -44,6 +49,8 @@ const failed = ref(false);
 const loaded = ref(false);
 const src = computed(() => imageUrl(props.card, props.size));
 const back = computed(() => backUrl(props.size));
+const hovered = ref(false);
+const animation = computed(() => (props.card ? catalogFor(props.card.uid)?.animation || null : null));
 // Rare and above get a frame and a holo sheen (docs/sdd/02-economia.md §3); nothing without a catalog.
 const rarityClass = computed(() => {
   const r = !props.faceDown && props.card ? catalogFor(props.card.uid)?.rarity : '';

@@ -70,6 +70,8 @@ export const ERRORS = {
   step_up_required: 'Confirme sua identidade entrando de novo com o Google.',
   edit_conflict: 'Outra pessoa alterou este item. Recarregue antes de salvar.',
   invalid_value: 'Valor inválido.',
+  no_consent: 'Esta carta não tem consentimento para animação.',
+  animation_invalid: 'Arquivo de animação inválido.',
   rate_changed: 'A taxa de conversão mudou. Confira o novo valor.',
   trades_disabled: 'As trocas estão desligadas no momento.',
   trade_locked: 'Sua conta ainda não pode trocar (conta nova ou trocas travadas).',

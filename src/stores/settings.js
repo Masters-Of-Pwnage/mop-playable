@@ -12,6 +12,8 @@ export const settings = reactive({
   enforceRules: true,
   lastDeck: '',
   serverUrl: '',
+  // Character animations: 'sempre' (also on hover) | 'ampliar' (zoom only) | 'desligado'.
+  cardMotion: window.matchMedia?.('(hover: hover)').matches ? 'sempre' : 'ampliar',
 });
 
 try {
@@ -27,6 +29,13 @@ watch(settings, (v) => {
     localStorage.setItem(KEY, JSON.stringify(v));
   } catch { /* ignore */ }
 }, { deep: true });
+
+/** Whether character animations may play (zoom = the card zoom dialog). Off with reduced motion or data saver. */
+export function motionEnabled(zoom = false) {
+  if (settings.reducedMotion || navigator.connection?.saveData) return false;
+  if (settings.cardMotion === 'desligado') return false;
+  return zoom || settings.cardMotion === 'sempre';
+}
 
 /** Lobby server WebSocket URL: setting > build env > config.json > same origin. */
 export async function resolveServerUrl() {

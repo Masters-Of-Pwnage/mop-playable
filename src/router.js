@@ -35,6 +35,7 @@ export const router = createRouter({
         { path: 'trocas', name: 'admin-trades', component: () => import('./views/admin/AdminTrades.vue') },
         { path: 'codigos', name: 'admin-codes', component: () => import('./views/admin/AdminCodes.vue') },
         { path: 'pacotes', name: 'admin-packs', component: () => import('./views/admin/AdminPacks.vue') },
+        { path: 'animacoes', name: 'admin-animations', component: () => import('./views/admin/AdminAnimations.vue') },
         { path: 'salas', name: 'admin-rooms', component: () => import('./views/admin/AdminRooms.vue') },
         { path: 'auditoria', name: 'admin-audit', component: () => import('./views/admin/AdminAudit.vue') },
         { path: 'sistema', name: 'admin-system', component: () => import('./views/admin/AdminSystem.vue') },

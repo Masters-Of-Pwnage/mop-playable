@@ -16,6 +16,26 @@
       </div>
     </div>
 
+    <div v-if="isOwner" class="panel-glass p-4">
+      <h2 class="subtitle font-bold">Tokens de API (pipeline de animações)</h2>
+      <p class="mt-1 text-xs muted">Usados por <code>scripts/anim/push.mjs</code> para enviar clipes para revisão. Escopo único: animations:write. O token aparece uma vez só.</p>
+      <form class="mt-3 flex flex-wrap items-center gap-2 text-sm" @submit.prevent="createToken">
+        <input v-model="tokenLabel" class="input w-48" placeholder="Nome (ex.: Mac do CleBeer)" minlength="2" required />
+        <select v-model.number="tokenDays" class="input w-32"><option :value="7">7 dias</option><option :value="30">30 dias</option><option :value="90">90 dias</option></select>
+        <button class="btn btn-sm" :disabled="busy">Criar token</button>
+      </form>
+      <div v-if="newToken" class="mt-3 rounded border border-amber/60 p-2 text-xs">
+        <div class="text-amber">Copie agora — não será mostrado de novo:</div>
+        <code class="mt-1 block select-all break-all font-mono">{{ newToken }}</code>
+      </div>
+      <ul class="mt-3 flex flex-col gap-1 text-xs">
+        <li v-for="t in tokens" :key="t.id" class="flex items-center justify-between gap-2 border-b border-white/5 pb-1">
+          <span>{{ t.label }} · {{ t.owner }} · expira {{ fmtDate(t.expiresAt) }}<span v-if="t.revokedAt" class="text-danger"> · revogado</span></span>
+          <button v-if="!t.revokedAt" class="btn btn-sm btn-danger" @click="revokeToken(t)">Revogar</button>
+        </li>
+      </ul>
+    </div>
+
     <div class="panel-glass p-4">
       <h2 class="subtitle font-bold">Funcionalidades (flags)</h2>
       <p class="mt-1 text-xs muted">Valem na hora, sem reiniciar. "Pacotes" e "Pagamentos" dependem da validação jurídica e só o dono liga.</p>
@@ -30,11 +50,11 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { account } from '../../stores/account.js';
 import { loadCatalog } from '../../stores/economy.js';
 import { toast } from '../../composables/toast.js';
-import { api, showError } from './adminApi.js';
+import { api, fmtDate, showError } from './adminApi.js';
 
 const FLAG_LABELS = { accounts: 'Contas (login Google)', shop: 'Loja', trades: 'Trocas', animations: 'Animações', packs: 'Pacotes aleatórios', payments: 'Pagamentos', leagues: 'Ligas', spectate: 'Modo espectador' };
 const health = ref(null);
@@ -52,6 +72,45 @@ async function load() {
   }
 }
 onMounted(load);
+
+const isOwner = computed(() => account.user?.role === 'owner');
+const tokens = ref([]);
+const tokenLabel = ref('');
+const tokenDays = ref(30);
+const newToken = ref('');
+
+async function loadTokens() {
+  if (!isOwner.value) return;
+  try {
+    tokens.value = (await api('GET', '/admin/tokens')).tokens;
+  } catch (err) {
+    showError(err);
+  }
+}
+onMounted(loadTokens);
+
+async function createToken() {
+  busy.value = true;
+  try {
+    newToken.value = (await api('POST', '/admin/tokens', { label: tokenLabel.value.trim(), days: tokenDays.value })).token;
+    tokenLabel.value = '';
+    loadTokens();
+  } catch (err) {
+    showError(err);
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function revokeToken(t) {
+  try {
+    await api('DELETE', `/admin/tokens/${t.id}`);
+    toast('Token revogado.', 'ok');
+    loadTokens();
+  } catch (err) {
+    showError(err);
+  }
+}
 
 async function toggle(f) {
   busy.value = true;
