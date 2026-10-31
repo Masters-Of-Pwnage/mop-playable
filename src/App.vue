@@ -16,6 +16,9 @@
           <span class="hidden md:inline">{{ settings.music > 0 ? 'Música' : 'Sem música' }}</span>
         </button>
         <template v-if="account.enabled">
+          <RouterLink v-if="account.user && economy.mineLoaded" to="/carteira" class="btn btn-ghost btn-sm font-mono text-neon" title="Carteira" @click="sfx('click')">
+            {{ economy.balances.CR }}<span class="text-xs">CR</span>
+          </RouterLink>
           <RouterLink v-if="account.user" to="/perfil" class="btn btn-ghost btn-sm max-w-[42vw]" :title="`Perfil de ${account.user.displayName}`" @click="sfx('click')">
             <img v-if="account.user.avatarUrl" :src="account.user.avatarUrl" alt="" class="h-6 w-6 rounded-full" referrerpolicy="no-referrer" />
             <span v-else class="grid h-6 w-6 place-items-center rounded-full border border-neon/60 font-mono text-xs text-neon">{{ initial }}</span>
@@ -75,16 +78,18 @@ import UiModal from './components/UiModal.vue';
 import GoogleIcon from './components/GoogleIcon.vue';
 import { account, login } from './stores/account.js';
 import { importLocalDecks, localDeckCount } from './stores/decks.js';
+import { claimDaily, economy, loadMine } from './stores/economy.js';
 
 const route = useRoute();
 const router = useRouter();
 const menuOpen = ref(false);
 const isGame = computed(() => route.name === 'game');
-const items = [
+const items = computed(() => [
   { to: '/decks', label: 'Montar deck' },
   { to: '/play', label: 'Jogar online' },
+  ...(account.enabled ? [{ to: '/loja', label: 'Loja' }, { to: '/colecao', label: 'Coleção' }] : []),
   { to: '/rules', label: 'Como jogar' },
-];
+]);
 const isActive = (to) => route.path.startsWith(to);
 const toastClass = (k) => ({ ok: 'border-neon', warn: 'border-amber', error: 'border-danger', info: 'border-cyan' }[k] || 'border-cyan');
 
@@ -127,6 +132,16 @@ watch(() => route.query.login, (value) => {
 const importOffer = ref(0);
 const importing = ref(false);
 const offerKey = () => `mop.decks.import-offered.${account.user?.publicId}`;
+// Wallet and collection follow the logged-in account; the daily bonus is claimed on arrival.
+watch(() => account.user?.publicId, async (id) => {
+  await loadMine().catch(() => {});
+  if (!id) return;
+  try {
+    const daily = await claimDaily();
+    if (daily.claimed) toast(`Bônus diário: +${daily.amount} créditos.`, 'ok', 3500);
+  } catch { /* shown on the next action */ }
+}, { immediate: true });
+
 watch(() => account.user?.publicId, (id) => {
   if (!id) return;
   try {

@@ -46,6 +46,7 @@
                   <button class="btn btn-sm btn-primary w-10 flex-none px-0" :disabled="copies(deck, card.uid) >= copyLimit(card) || total >= MAX_CARDS" aria-label="Adicionar" @click="add(card)">+</button>
                 </div>
                 <div class="truncate text-center text-xs muted">{{ card.name }}</div>
+                <div v-if="economy.mineLoaded" class="text-center font-mono text-[11px]" :class="owned(card.uid) < copies(deck, card.uid) ? 'text-amber' : 'muted'">tenho {{ owned(card.uid) }}</div>
               </div>
             </div>
             <div v-if="visibleCards.length < filtered.length" class="py-4 text-center">
@@ -88,6 +89,14 @@
               </template>
             </TransitionGroup>
             <p v-if="!deck.cards.length" class="py-6 text-center text-sm muted">Use + nas cartas para montar seu deck.</p>
+          </div>
+          <div v-if="economy.mineLoaded && deck.cards.length" class="rounded-lg border p-2 text-sm" :class="missing.missing ? 'border-amber/50' : 'border-neon/30'">
+            <template v-if="missing.missing">
+              <div class="text-amber">Faltam {{ missing.missing }} cópia(s) na sua coleção para jogar este deck no modo Coleção.</div>
+              <button v-if="missing.items.length" class="btn btn-sm mt-2 w-full" :disabled="!economy.shopOpen" @click="buyOpen = true">Comprar o que falta ({{ missing.total }} CR)</button>
+              <div v-if="missing.blocked.length" class="mt-1 text-xs muted">{{ missing.blocked.length }} carta(s) não estão à venda agora.</div>
+            </template>
+            <div v-else class="text-neon">Você tem todas as cartas deste deck.</div>
           </div>
           <div class="grid grid-cols-3 gap-2">
             <button class="btn btn-sm" @click="newDeckConfirm">Novo</button>
@@ -137,6 +146,20 @@
     </UiModal>
 
     <PrintPreview :open="printOpen" :deck="deck" @close="printOpen = false" />
+
+    <UiModal :open="buyOpen" title="Comprar o que falta" @close="buyOpen = false">
+      <ul class="flex max-h-[40vh] flex-col gap-1 overflow-y-auto text-sm">
+        <li v-for="i in missing.items" :key="i.uid" class="flex justify-between gap-2">
+          <span class="truncate">{{ i.qty }}× {{ getCard(i.uid)?.name }}</span>
+          <span class="shrink-0 font-mono muted">{{ catalogFor(i.uid).price * i.qty }} CR</span>
+        </li>
+      </ul>
+      <div class="mt-3 font-mono">Total: {{ missing.total }} CR · saldo depois: <span :class="economy.balances.CR - missing.total < 0 ? 'text-danger' : 'text-neon'">{{ economy.balances.CR - missing.total }} CR</span></div>
+      <div class="mt-4 flex justify-end gap-2">
+        <button class="btn" @click="buyOpen = false">Cancelar</button>
+        <button class="btn btn-primary" :disabled="buying || economy.balances.CR < missing.total" @click="buyMissing">Comprar</button>
+      </div>
+    </UiModal>
   </div>
 </template>
 
@@ -164,6 +187,7 @@ import { settings } from '../stores/settings.js';
 import { sfx } from '../stores/audio.js';
 import { toast } from '../composables/toast.js';
 import { session } from '../game/session.js';
+import { buy, catalogFor, economy, owned, shortfall } from '../stores/economy.js';
 
 const router = useRouter();
 const deck = reactive(newDeck());
@@ -188,6 +212,22 @@ const total = computed(() => count(deck));
 const deckStats = computed(() => stats(deck));
 const colorSymbols = computed(() => COLORS.filter((c) => deckStats.value.colors[c]));
 const playProblem = computed(() => problemsForPlay(deck));
+const missing = computed(() => shortfall(deck));
+const buyOpen = ref(false);
+const buying = ref(false);
+
+async function buyMissing() {
+  buying.value = true;
+  try {
+    await buy(missing.value.items);
+    toast('Cartas compradas. Este deck está completo na sua coleção.', 'ok');
+    buyOpen.value = false;
+  } catch (err) {
+    toast(err.message, 'error', 4000);
+  } finally {
+    buying.value = false;
+  }
+}
 const grouped = computed(() => {
   const order = [Kind.CREATURE, Kind.PLANESWALKER, Kind.INSTANT, Kind.SORCERY, Kind.ENCHANTMENT, Kind.ARTIFACT, Kind.OTHER, Kind.LAND];
   const groups = new Map();
