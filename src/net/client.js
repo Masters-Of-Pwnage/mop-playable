@@ -5,7 +5,8 @@
 import { reactive } from 'vue';
 import { resolveServerUrl, settings } from '../stores/settings.js';
 
-export const PROTOCOL = 1;
+// v2: collection rooms (deck/decks/result). The server still accepts v1 clients.
+export const PROTOCOL = 2;
 const SESSION_KEY = 'mop.session.v1';
 
 export const net = reactive({
@@ -177,6 +178,14 @@ function handle(msg) {
     case 'relay':
       for (const fn of relayListeners) fn(msg.data, msg.from);
       break;
+    case 'deck_ok': // collection room: the server validated a seat's deck
+      if (net.room?.decks) net.room.decks[msg.seat] = { name: msg.name, count: msg.count };
+      emitRoom(msg);
+      break;
+    case 'decks': // collection room, host only: canonical lists of both seats
+    case 'match_result':
+      emitRoom(msg);
+      break;
     case 'error':
       if (msg.code === 'bad_token') {
         token = '';
@@ -202,7 +211,9 @@ function emitRoom(msg) {
 export const lobby = {
   refresh: () => send({ type: 'list' }),
   rename: (name) => send({ type: 'rename', name }),
-  create: (name, visibility) => send({ type: 'create', name, visibility }),
+  create: (name, visibility, mode = 'livre') => send({ type: 'create', name, visibility, mode }),
+  deck: (deckId) => send({ type: 'deck', deckId }),
+  result: (winnerSeat, turns) => send({ type: 'result', winnerSeat, turns }),
   join: (code) => send({ type: 'join', code }),
   leave: () => send({ type: 'leave' }),
   started: () => send({ type: 'started' }),

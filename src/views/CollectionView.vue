@@ -53,6 +53,9 @@
             </label>
             <button class="btn btn-sm self-start" :disabled="busy || sellQty < 1 || sellQty > excess(selected.uid)" @click="confirmSell">Vender por {{ entry.sellPrice * (sellQty || 0) }} CR</button>
           </template>
+          <div v-if="entry?.tradeable" class="flex items-center gap-2">
+            <button class="btn btn-sm" @click="toggleWish">{{ wanted(selected.uid) ? '★ Na lista de desejos' : '☆ Quero (lista de desejos)' }}</button>
+          </div>
           <RouterLink v-if="entry?.buyable" to="/loja" class="btn btn-sm mt-auto self-start">Comprar mais na loja</RouterLink>
         </div>
       </div>
@@ -68,7 +71,7 @@ import UiModal from '../components/UiModal.vue';
 import { filterCards } from '../engine/cards.js';
 import { account, login } from '../stores/account.js';
 import { cardsStore } from '../stores/cards.js';
-import { catalogFor, economy, excess, owned, RARITIES, RARITY_LABELS, sell } from '../stores/economy.js';
+import { catalogFor, economy, excess, owned, RARITIES, RARITY_LABELS, sell, setWishlist, wanted } from '../stores/economy.js';
 import { toast } from '../composables/toast.js';
 
 const SHOW = [
@@ -105,6 +108,16 @@ const list = computed(() => filterCards(cardsStore.cards, { name: query.value })
 const visible = computed(() => list.value.slice(0, limit.value));
 watch([query, show, rarities], () => { limit.value = 60; }, { deep: true });
 watch(selected, () => { sellQty.value = 1; });
+
+async function toggleWish() {
+  try {
+    const uid = selected.value.uid;
+    await setWishlist(uid, wanted(uid) ? 0 : Math.max(1, 4 - owned(uid)));
+    toast(wanted(uid) ? 'Adicionada à lista de desejos.' : 'Removida da lista de desejos.', 'info');
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
 
 async function confirmSell() {
   busy.value = true;

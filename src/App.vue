@@ -76,7 +76,7 @@ import { sfx, playMusic, stopMusic, applyVolumes } from './stores/audio.js';
 import { toast, toasts } from './composables/toast.js';
 import UiModal from './components/UiModal.vue';
 import GoogleIcon from './components/GoogleIcon.vue';
-import { account, isStaff, login } from './stores/account.js';
+import { account, hasFeature, isStaff, login } from './stores/account.js';
 import { importLocalDecks, localDeckCount } from './stores/decks.js';
 import { claimDaily, economy, loadMine } from './stores/economy.js';
 
@@ -88,6 +88,8 @@ const items = computed(() => [
   { to: '/decks', label: 'Montar deck' },
   { to: '/play', label: 'Jogar online' },
   ...(account.enabled ? [{ to: '/loja', label: 'Loja' }, { to: '/colecao', label: 'Coleção' }] : []),
+  ...(account.user && hasFeature('trades') ? [{ to: '/trocas', label: 'Trocas' }] : []),
+  ...(account.user && hasFeature('packs') ? [{ to: '/pacotes', label: 'Pacotes' }] : []),
   { to: '/rules', label: 'Como jogar' },
   ...(account.user && isStaff() ? [{ to: '/admin', label: 'Admin' }] : []),
 ]);

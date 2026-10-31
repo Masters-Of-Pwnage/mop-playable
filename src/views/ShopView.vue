@@ -55,10 +55,12 @@
             <input v-model.number="qty" type="number" min="1" :max="maxQty" class="input w-20" />
           </label>
           <div class="font-mono">Total: {{ total }} CR · saldo depois: <span :class="after < 0 ? 'text-danger' : 'text-neon'">{{ after }} CR</span></div>
-          <p v-if="reason" class="text-amber">{{ reason }}</p>
+          <p v-if="reason && !convertNeeded" class="text-amber">{{ reason }}</p>
+          <p v-if="convertNeeded" class="text-cyan">Faltam {{ -after }} CR: dá para converter {{ convertNeeded }} PWC ({{ convertNeeded * economy.pwcToCr }} CR) e comprar.</p>
           <div class="mt-auto flex justify-end gap-2">
             <button class="btn" @click="selected = null">Fechar</button>
-            <button class="btn btn-primary" :disabled="!!reason || busy" @click="confirmBuy">Comprar</button>
+            <button v-if="convertNeeded" class="btn btn-primary" :disabled="busy" @click="convertAndBuy">Converter {{ convertNeeded }} PWC e comprar</button>
+            <button v-else class="btn btn-primary" :disabled="!!reason || busy" @click="confirmBuy">Comprar</button>
           </div>
         </div>
       </div>
@@ -74,7 +76,7 @@ import UiModal from '../components/UiModal.vue';
 import { FILTER_TYPES, filterCards } from '../engine/cards.js';
 import { account, login } from '../stores/account.js';
 import { cardsStore } from '../stores/cards.js';
-import { buy, catalogFor, economy, owned, RARITIES, RARITY_LABELS } from '../stores/economy.js';
+import { buy, catalogFor, convert, economy, owned, pwcFor, RARITIES, RARITY_LABELS } from '../stores/economy.js';
 import { toast } from '../composables/toast.js';
 import { sfx } from '../stores/audio.js';
 
@@ -127,6 +129,22 @@ const reason = computed(() => {
   if (after.value < 0) return 'Saldo insuficiente.';
   return '';
 });
+
+// R5: when credits are short and coins cover it, convert exactly what is missing.
+const convertNeeded = computed(() => (reason.value === 'Saldo insuficiente.' ? pwcFor(-after.value) : 0));
+
+async function convertAndBuy() {
+  busy.value = true;
+  try {
+    await convert(convertNeeded.value);
+  } catch (err) {
+    toast(err.message, 'error', 4000);
+    busy.value = false;
+    return;
+  }
+  busy.value = false;
+  await confirmBuy();
+}
 
 function open(card) {
   sfx('click');

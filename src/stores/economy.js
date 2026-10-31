@@ -19,6 +19,9 @@ const state = reactive({
   balances: { PWC: 0, CR: 0 },
   collection: {}, // uid -> qty
   mineLoaded: false,
+  pwcToCr: 10,
+  convertLeftToday: 0,
+  wishlist: {}, // uid -> qty
 });
 
 export async function loadCatalog() {
@@ -38,8 +41,11 @@ export async function loadMine() {
     state.balances = { PWC: 0, CR: 0 };
     return;
   }
-  const [wallet, collection] = await Promise.all([api('GET', '/me/wallet'), api('GET', '/me/collection')]);
+  const [wallet, collection, wishlist] = await Promise.all([api('GET', '/me/wallet'), api('GET', '/me/collection'), api('GET', '/me/wishlist')]);
   state.balances = wallet.balances;
+  state.pwcToCr = wallet.pwcToCr;
+  state.convertLeftToday = wallet.convertLeftToday;
+  state.wishlist = Object.fromEntries(wishlist.cards.map((c) => [c.uid, c.qty]));
   setCollection(collection.cards);
   state.mineLoaded = true;
 }
@@ -77,6 +83,47 @@ export async function sell(items) {
   state.balances = r.balances;
   setCollection(r.cards);
   return r;
+}
+
+/** PwnCoins -> credits at the rate the player saw (the server refuses if it changed). */
+export async function convert(pwc) {
+  const r = await api('POST', '/me/convert', { pwc, expectedRate: state.pwcToCr });
+  state.balances = r.balances;
+  state.convertLeftToday = Math.max(0, state.convertLeftToday - pwc);
+  return r;
+}
+
+/** PwnCoins needed to cover `credits` missing, or 0 when the coins are not enough (R5: exact amount). */
+export function pwcFor(credits) {
+  if (credits <= 0) return 0;
+  const need = Math.ceil(credits / state.pwcToCr);
+  return need <= state.balances.PWC && need <= state.convertLeftToday ? need : 0;
+}
+
+export async function redeem(code) {
+  const r = await api('POST', '/me/redeem', { code });
+  state.balances = r.balances;
+  loadMine().catch(() => {});
+  return r;
+}
+
+export async function setWishlist(uid, qty) {
+  const next = { ...state.wishlist };
+  if (qty > 0) next[uid] = qty;
+  else delete next[uid];
+  await api('PUT', '/me/wishlist', { cards: Object.entries(next).map(([u, q]) => ({ uid: u, qty: q })) });
+  state.wishlist = next;
+}
+
+export const wanted = (uid) => state.wishlist[uid] || 0;
+
+/** Estimated value of one side of a trade (shop price of the cards + coins at the rate). */
+export function sideValue(side) {
+  return (side.pwc || 0) * state.pwcToCr + (side.cards || []).reduce((n, c) => n + (catalogFor(c.uid)?.price || 0) * c.qty, 0);
+}
+
+export function applyBalances(balances) {
+  state.balances = balances;
 }
 
 /** Copies a deck needs beyond the collection, and what buying them would cost. */

@@ -204,6 +204,8 @@ let pickResolve = null;
 let promptResolve = null;
 let seq = 0;
 let unsubEvents = null;
+let unsubRoom = null;
+let collectionMatch = false; // online "Coleção" room: report the result for rewards
 let lastBanner = -1;
 let drag = null;
 let layoutTimer = null;
@@ -230,12 +232,23 @@ onMounted(() => {
     return;
   }
   seat.value = cfg.mode === 'online' ? cfg.seat : 0;
+  collectionMatch = cfg.mode === 'online' && !!cfg.collection;
+  if (collectionMatch) {
+    unsubRoom = lobby.onRoom((msg) => {
+      if (msg.type !== 'match_result') return;
+      if (msg.reward > 0) toast(`Partida registrada: +${msg.reward} créditos.`, 'ok', 5000);
+      else if (msg.status === 'divergente') toast('Os resultados informados não bateram: partida sem recompensa.', 'warn', 5000);
+      else if (msg.status === 'curta') toast('Partida curta demais para recompensa.', 'info', 4000);
+      else toast('Partida registrada (limite diário de recompensas atingido).', 'info', 4000);
+    });
+  }
   match.start({ mode: cfg.mode, players, seat: seat.value, enforce: settings.enforceRules });
   scheduleLayout();
 });
 
 onBeforeUnmount(() => {
   unsubEvents?.();
+  unsubRoom?.();
   match.dispose();
   window.removeEventListener('resize', scheduleLayout);
   window.removeEventListener('keydown', onKey);
@@ -318,7 +331,11 @@ function onEvent(ev) {
       openPick({ title: `Mão de ${s.players[ev.p].name}`, entries, min: 0, max: 0, confirmLabel: 'Fechar' });
       break;
     }
-    case 'game_over': setTimeout(() => showGameOver(ev.winner), 700); break;
+    case 'game_over':
+      // Both seats report; the server pays only when the two reports agree (RF-2.21).
+      if (collectionMatch) lobby.result(ev.winner, match.state.turn);
+      setTimeout(() => showGameOver(ev.winner), 700);
+      break;
     case 'log': logLines.value.push({ text: ev.text }); trimLog(); break;
     case 'chat': logLines.value.push({ text: `${s.players[ev.from]?.name || '?'}: ${ev.text}`, chat: true }); trimLog(); sfx('notify'); break;
     default: break;

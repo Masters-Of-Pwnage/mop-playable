@@ -30,7 +30,7 @@
 import { onMounted, ref } from 'vue';
 import { api, download, fmtDate, showError } from './adminApi.js';
 
-const ACTIONS = ['catalog', 'rarity', 'settings', 'flags', 'user.signup', 'user.suspend', 'user.ban', 'user.unban', 'user.adjust', 'user.role', 'user.trade_lock', 'user.revoke_sessions', 'user.delete', 'ledger.reverse', 'room.close'];
+const ACTIONS = ['catalog', 'rarity', 'settings', 'flags', 'user.signup', 'user.suspend', 'user.ban', 'user.unban', 'user.adjust', 'user.role', 'user.trade_lock', 'user.revoke_sessions', 'user.delete', 'ledger.reverse', 'room.close', 'trade.approve', 'trade.reject', 'codes', 'packs'];
 const entries = ref([]);
 const next = ref(null);
 const action = ref('');

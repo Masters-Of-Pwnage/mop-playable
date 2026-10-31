@@ -94,6 +94,9 @@
           <label class="flex flex-col gap-1">Consentimento de animação
             <select v-model="form.animationConsent" class="input" :disabled="!canEdit"><option v-for="(l, k) in CONSENT_LABELS" :key="k" :value="k">{{ l }}</option></select>
           </label>
+          <label class="flex flex-col gap-1">Peso em pacote <span class="text-xs muted">0 = fora dos pacotes</span>
+            <input v-model.number="form.packWeight" type="number" min="0" class="input" :disabled="!canEdit" />
+          </label>
           <label class="col-span-2 flex items-center gap-2"><input v-model="form.tradeable" type="checkbox" :disabled="!canEdit" /> Pode ser trocada entre jogadores</label>
           <div class="col-span-2 flex flex-wrap justify-end gap-2">
             <span class="mr-auto self-center text-xs muted">{{ editing.owners }} donos · {{ editing.sold7d }} vendidas em 7 dias</span>
@@ -242,7 +245,7 @@ async function openEditor(c) {
     rarity: c.rarity, availability: c.availability, price: c.price ?? '', sellPrice: c.sellPrice ?? '',
     availableFrom: toLocalInput(c.availableFrom), availableUntil: toLocalInput(c.availableUntil),
     stockTotal: c.stockTotal ?? '', perUserLimit: c.perUserLimit ?? '', maxOwned: c.maxOwned ?? '',
-    animationConsent: c.animationConsent, tradeable: c.tradeable,
+    animationConsent: c.animationConsent, tradeable: c.tradeable, packWeight: c.packWeight,
   });
   history.value = [];
   try {
@@ -264,7 +267,7 @@ async function saveEditor() {
     rarity: form.rarity, availability: form.availability, price: num(form.price), sellPrice: num(form.sellPrice),
     availableFrom: fromLocalInput(form.availableFrom), availableUntil: fromLocalInput(form.availableUntil),
     stockTotal: num(form.stockTotal), perUserLimit: num(form.perUserLimit), maxOwned: num(form.maxOwned),
-    animationConsent: form.animationConsent, tradeable: form.tradeable,
+    animationConsent: form.animationConsent, tradeable: form.tradeable, packWeight: Number(form.packWeight) || 0,
   };
   const changes = Object.fromEntries(Object.entries(next).filter(([k, v]) => v !== c[k]));
   if (!Object.keys(changes).length) { editing.value = null; return; }

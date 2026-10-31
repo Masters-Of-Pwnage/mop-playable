@@ -54,7 +54,10 @@ import { getCard } from '../../stores/cards.js';
 import { toast } from '../../composables/toast.js';
 import { api, fmtDate, showError } from './adminApi.js';
 
-const KINDS = { signup_grant: 'Kit inicial', daily: 'Bônus diário', shop_buy: 'Compra', shop_sell: 'Venda', admin_adjust: 'Ajuste manual', reversal: 'Estorno' };
+const KINDS = {
+  signup_grant: 'Kit inicial', daily: 'Bônus diário', shop_buy: 'Compra', shop_sell: 'Venda', admin_adjust: 'Ajuste manual', reversal: 'Estorno',
+  convert: 'Conversão PWC→CR', trade: 'Troca', redeem: 'Código resgatado', pack_open: 'Pacote aberto', match_reward: 'Recompensa de partida',
+};
 const txs = ref([]);
 const next = ref(null);
 const user = ref('');
@@ -69,6 +72,11 @@ function summary(t) {
   if (m.total !== undefined) return `${m.items?.length || 0} item(ns), ${m.total} CR`;
   if (m.amount !== undefined) return `${m.target}: ${m.amount} ${m.currency || ''}${m.cards?.length ? ` + ${m.cards.length} carta(s)` : ''}`;
   if (m.credits !== undefined) return `${m.credits} CR + ${m.cards} cartas`;
+  if (m.trade) return `${m.from} → ${m.to}`;
+  if (m.rate) return `${m.pwc} PWC → ${m.credits} CR`;
+  if (m.room) return `sala ${m.room}${m.won ? ' (vitória)' : ''}`;
+  if (m.product) return `pacote ${m.product} v${m.version}${m.refund ? `, reembolso ${m.refund} CR` : ''}`;
+  if (m.batch) return m.name;
   if (m.day) return m.day;
   return t.reason || '';
 }
