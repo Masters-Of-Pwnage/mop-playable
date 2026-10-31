@@ -10,9 +10,10 @@
     "test": "node --test test/"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13"
   },
   "dependencies": {
+    "fastify": "^5.12.7",
     "ws": "^8.21.0"
   }
 }

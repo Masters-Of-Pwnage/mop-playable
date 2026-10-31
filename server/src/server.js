@@ -1,30 +1,13 @@
 import { randomBytes } from 'node:crypto';
-import http from 'node:http';
 import net from 'node:net';
+import Fastify from 'fastify';
 import { WebSocketServer } from 'ws';
 import { loadConfig } from './config.js';
+import { migrate, openDb } from './db.js';
+import { Bucket, KeyedLimiter } from './ratelimit.js';
 import { RoomManager } from './rooms.js';
-import { serveStatic, sendJson } from './static.js';
+import { serveStatic } from './static.js';
 import { cleanText, normalizeCode, parseMessage, ERRORS, PROTOCOL_VERSION, MAX_NAME, MAX_ROOM_NAME } from './protocol.js';
-
-/** Token bucket rate limiter. */
-class Bucket {
-  constructor(perSecond, burst) {
-    this.rate = perSecond;
-    this.burst = burst;
-    this.tokens = burst;
-    this.last = Date.now();
-  }
-
-  take(cost = 1) {
-    const now = Date.now();
-    this.tokens = Math.min(this.burst, this.tokens + ((now - this.last) / 1000) * this.rate);
-    this.last = now;
-    if (this.tokens < cost) return false;
-    this.tokens -= cost;
-    return true;
-  }
-}
 
 /** URL parsing that never throws: a request target such as "//" makes `new URL(raw, base)` throw. */
 function safeUrl(raw) {
@@ -40,31 +23,65 @@ function safeUrl(raw) {
  *   GET  /            web build of the game (STATIC_DIR)
  *   GET  /health      liveness + counters
  *   GET  /api/rooms   public rooms waiting for a player
+ *   *    /api/...     JSON API (accounts, economy, admin; docs/sdd/)
  *   WS   /ws          lobby + relay protocol (see README)
  */
 export function createServer(overrides = {}) {
   const config = loadConfig(overrides);
+  const db = openDb(config.dbFile);
+  migrate(db);
   const rooms = new RoomManager(config);
   const ipConnections = new Map();
   const joinFailures = new Map(); // ip -> { count, resetAt }
+  const apiLimiter = new KeyedLimiter(config.apiRateLimitPerSecond, config.apiRateLimitBurst);
 
-  const httpServer = http.createServer((req, res) => {
-    const url = safeUrl(req.url);
-    if (!url) {
-      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Bad request');
-      return;
-    }
-    if (url.pathname === '/health') {
-      sendJson(res, { ok: true, protocol: PROTOCOL_VERSION, ...rooms.stats() });
-      return;
-    }
-    if (url.pathname === '/api/rooms') {
-      sendJson(res, { rooms: rooms.publicRooms() }, 200, { 'Access-Control-Allow-Origin': '*' });
-      return;
-    }
-    if (serveStatic(req, res, config)) return;
-    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Not found');
+  const app = Fastify({
+    logger: false,
+    bodyLimit: config.apiBodyBytes,
+    // The client address comes from clientIp(), which applies TRUST_PROXY / CLIENT_IP_HEADER.
+    trustProxy: false,
+    return503OnClosing: true,
   });
+  app.decorate('mop', { config, db, rooms });
+
+  app.addHook('onRequest', async (req, reply) => {
+    // A request target such as "//" must get a 400, not reach the router or the static handler.
+    if (!safeUrl(req.raw.url)) return reply.code(400).type('text/plain; charset=utf-8').send('Bad request');
+    req.clientIp = clientIp(req.raw);
+    if (req.url.startsWith('/api/')) {
+      reply.header('Cache-Control', 'no-store').header('X-Content-Type-Options', 'nosniff');
+      if (!apiLimiter.take(req.clientIp)) return reply.code(429).send(apiError('rate_limited'));
+    }
+    return undefined;
+  });
+
+  app.setErrorHandler((err, _req, reply) => {
+    const status = err.statusCode >= 400 && err.statusCode < 500 ? err.statusCode : 500;
+    if (status === 500) console.error('[mop-server] erro na API:', err);
+    const code = status === 413 ? 'payload_too_large' : status === 500 ? 'internal' : 'bad_request';
+    reply.code(status).send(apiError(code));
+  });
+
+  app.setNotFoundHandler((req, reply) => {
+    if (req.url.startsWith('/api/')) return reply.code(404).send(apiError('not_found'));
+    reply.hijack();
+    if (!serveStatic(req.raw, reply.raw, config)) {
+      reply.raw.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Not found');
+    }
+    return undefined;
+  });
+
+  app.get('/health', async (_req, reply) => {
+    reply.header('Cache-Control', 'no-cache').header('X-Content-Type-Options', 'nosniff');
+    return { ok: true, protocol: PROTOCOL_VERSION, db: dbAlive(db), ...rooms.stats() };
+  });
+
+  app.get('/api/rooms', async (_req, reply) => {
+    reply.header('Access-Control-Allow-Origin', '*');
+    return { rooms: rooms.publicRooms() };
+  });
+
+  const httpServer = app.server;
 
   const wss = new WebSocketServer({ noServer: true, maxPayload: config.maxMessageBytes, perMessageDeflate: false });
 
@@ -297,25 +314,41 @@ export function createServer(overrides = {}) {
   const joinSweep = setInterval(() => {
     const now = Date.now();
     for (const [ip, entry] of joinFailures) if (entry.resetAt <= now) joinFailures.delete(ip);
+    apiLimiter.sweep();
   }, 60_000);
   joinSweep.unref?.();
 
   return {
     config,
+    db,
     rooms,
+    app,
     httpServer,
     wss,
-    listen(port = config.port, host = config.host) {
-      return new Promise((resolve) => {
-        httpServer.listen(port, host, () => resolve(httpServer.address()));
-      });
+    async listen(port = config.port, host = config.host) {
+      await app.listen({ port, host });
+      return httpServer.address();
     },
     async close() {
       clearInterval(joinSweep);
       rooms.dispose();
       for (const ws of wss.clients) ws.terminate();
       await new Promise((resolve) => wss.close(() => resolve()));
-      await new Promise((resolve) => httpServer.close(() => resolve()));
+      await app.close();
+      db.close();
     },
   };
+}
+
+/** API error body: { error: code, message: text in pt-BR } (docs/sdd/00-arquitetura.md §5). */
+export function apiError(code, message) {
+  return { error: code, message: message || ERRORS[code] || code };
+}
+
+function dbAlive(db) {
+  try {
+    return db.prepare('SELECT 1 AS ok').get().ok === 1;
+  } catch {
+    return false;
+  }
 }

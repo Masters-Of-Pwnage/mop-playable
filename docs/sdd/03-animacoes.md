@@ -10,6 +10,7 @@ Restrições do projeto:
 
 - `cards/` e `images/` **nunca são editados**. Tudo que é gerado vai para `/data/media/anim/` (servidor) ou `public/` (build, ignorado no git).
 - A maioria das cartas retrata **pessoas reais** da comunidade. Animar o rosto de alguém com IA exige **consentimento** (`animation_consent = 'concedido'`). Sem isso, a carta recebe só o nível CSS, que não altera o rosto.
+- **Status (D5, 2026-10-31):** o dono do produto confirmou que as autorizações já existem. A semente do catálogo marca os personagens como `concedido`, e o opt-out continua no admin.
 
 ## 2. Orçamento (cotações reais do Artlist em 2026-10-31)
 

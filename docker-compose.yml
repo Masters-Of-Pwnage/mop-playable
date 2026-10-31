@@ -12,14 +12,22 @@ services:
     restart: unless-stopped
     ports:
       - "8787:8787"
+    volumes:
+      - mop-data:/data   # accounts, economy, admin (SQLite) and uploaded media: back it up
     environment:
       PORT: "8787"
       TRUST_PROXY: "0"   # port published directly; set to the number of reverse proxies in front (usually 1)
       # PUBLIC_WS_URL: wss://mop.example.com/ws   # set when behind a reverse proxy with its own host name
       # ALLOWED_ORIGINS: https://mop.example.com  # comma-separated; empty = any origin
+      # PUBLIC_URL: https://mop.example.com       # needed by Google login (redirect URI)
+      # FEATURES: accounts,shop,trades,animations # see docs/sdd/README.md (packs/payments stay off)
+      # GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / SESSION_SECRET / OWNER_EMAILS: secrets, never in this file
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
+
+volumes:
+  mop-data:

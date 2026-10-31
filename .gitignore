@@ -4,6 +4,9 @@ dist
 /public/image/
 /public/thumb/
 
+# Local server state (SQLite, media)
+server/data/
+
 # Godot game project (game/)
 game/.godot/
 game/addons/ziva_agent/
@@ -14,3 +17,6 @@ game/build/
 
 # Security assessment artifacts (may contain homelab details)
 pentest/
+
+# Animation pipeline scratch (crops, raw/encoded videos)
+.anim-work/

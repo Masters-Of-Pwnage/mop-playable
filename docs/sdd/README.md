@@ -44,19 +44,24 @@
 
 Antes de abrir o site para a internet (`deploy_mop.py --publico`), rodar o pentest de retest com foco em authn, authz e lógica de negócio (00 §7, S8).
 
-## Decisões em aberto (padrão proposto entre parênteses)
+## Decisões (fechadas com o dono do produto em 2026-10-31)
 
-| # | Decisão | Padrão |
+| # | Decisão | Resolução |
 |---|---|---|
-| D1 | Vender PwnCoins por dinheiro real? | **Não na v1.** PWC vem de eventos, códigos e admin. Se sim em F6: PIX via gateway, sem saque, termos próprios |
-| D2 | Boosters aleatórios (pagos com CR ou PWC)? | **Não.** Compra direta de cartas. Rever com jurídico por causa da Lei 15.211/2025 (ECA Digital) |
+| D1 | Vender PwnCoins por dinheiro real? | **Não na v1.** PWC vem de códigos de evento e concessão do admin |
+| D2 | Boosters aleatórios? | **Sim, os pacotes existem** ([02 §5.7](02-economia.md)), com probabilidades publicadas e restrição a maiores de 18. A flag `packs` fica **desligada em produção** até a validação jurídica (D10) |
 | D3 | Prática contra a IA com todas as cartas liberadas? | **Sim.** Posse só vale para salas Coleção e ligas |
 | D4 | Build do GitHub Pages continua? | **Sim, só convidado** (`VITE_ACCOUNTS=0`) |
-| D5 | Consentimento para animar pessoas reais | **Opt-in por carta**, com opt-out a qualquer momento |
-| D6 | Banco | **SQLite** (ADR-01). PostgreSQL só com múltiplas réplicas |
-| D7 | Site continua só LAN+VPN? | Pode continuar. O Google OAuth funciona igual. Para abrir: pentest antes e `/api/admin` atrás da access list |
+| D5 | Consentimento para animar pessoas reais | **As autorizações já existem.** Personagens entram com `animation_consent = 'concedido'`. O opt-out continua disponível no admin |
+| D6 | Banco | **SQLite** (ADR-01) |
+| D7 | Site continua só LAN+VPN? | **Sim, por enquanto.** Abrir exige o pentest antes |
 | D8 | Importar decks do `localStorage` no primeiro login? | **Sim**, marcando como incompletos os que têm cartas não possuídas |
-| D9 | Prêmios de temporada | **Físicos e presenciais**, decididos pelo organizador do evento. Nada em dinheiro na plataforma |
+| D9 | Prêmios de temporada | **Físicos e presenciais**, decididos pelo organizador do evento |
+| D10 | Validação jurídica (ECA Digital, Lei 5.768/1971) | **Adiada.** Tudo que depende dela (`packs` em produção, prêmios) fica desligado |
+| D11 | Servidor HTTP | **Fastify** (ADR-02) |
+| D12 | Valores iniciais da economia, nomes PwnCoin/Crédito, regras de troca, origem das PWC | **Aprovados** como estão em 02 |
+| D13 | Pasta `game/` (port Godot) | **Mantida como está**, fora dos commits |
+| D14 | Orçamento Artlist | Piloto (~2,7 mil créditos) e teto da onda 1 (~8 mil) **aprovados**. Uso dos gerados num jogo público **confirmado** nos termos do plano |
 
 ## Convenções deste SDD
 

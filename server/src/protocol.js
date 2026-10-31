@@ -44,4 +44,6 @@ export const ERRORS = {
   payload_too_large: 'Mensagem grande demais.',
   bad_token: 'Sessão expirada.',
   version: 'Versão do jogo incompatível com o servidor. Atualize o jogo.',
+  not_found: 'Recurso não encontrado.',
+  internal: 'Erro interno. Tente novamente.',
 };

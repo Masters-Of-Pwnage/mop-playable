@@ -130,6 +130,25 @@ Preços padrão por raridade (`rarity_defaults`, editáveis no admin):
 | RF-2.21 | Recompensas de partida usam `result` dos dois lados mais os critérios da tabela de fontes, numa transação com `reward_counters` |
 | RF-2.22 | A prática contra a IA e as salas "Livre" continuam com **todas** as cartas liberadas (decisão D3), sem recompensa |
 
+### 5.7 Pacotes aleatórios (D2 — flag `packs`, desligada em produção até D10)
+
+| ID | Requisito |
+|---|---|
+| RF-2.23 | O admin define **produtos de pacote**: nome, arte, preço em CR, número de cartas, **slots** (ex.: 4 slots "comum", 2 "incomum+", 1 "rara+"), janela e limite diário por jogador |
+| RF-2.24 | Cada slot sorteia uma raridade pelas **probabilidades do slot** e depois uma carta dessa raridade entre as `card_catalog` com `pack_weight > 0`, proporcionalmente ao peso. Estoque global e `max_owned` são respeitados. Carta que estouraria `max_owned` vira o reembolso de `sell_credits` em CR, mostrado na abertura |
+| RF-2.25 | As **probabilidades efetivas por raridade e por carta são públicas**: página "Probabilidades" do pacote, calculada pelo servidor a partir da configuração vigente |
+| RF-2.26 | O sorteio usa `crypto.randomInt` no servidor, **dentro da transação** de compra. O cliente só recebe o resultado. Cada abertura grava `pack_openings` (produto, versão da configuração, cartas, seed de auditoria) |
+| RF-2.27 | Garantia anti-azar: a cada `packs.pity_n` pacotes (padrão 10) sem rara ou superior, o próximo garante rara ou superior. O contador fica por jogador e por produto |
+| RF-2.28 | Pacotes só se compram com **CR** (sem dinheiro real, D1) e exigem uma declaração de **maioridade** no perfil (`users.adult_confirmed_at`). Sem ela, o botão fica bloqueado com explicação |
+| RF-2.29 | Mudar probabilidades ou pesos gera uma **nova versão** da configuração. Aberturas antigas continuam ligadas à versão em que aconteceram |
+| RF-2.30 | Ligar a flag `packs` exige papel `owner` e fica registrado no `audit_log` |
+
+Tabelas extras (migração `005_packs.sql`): `pack_products(id, name, art, price_credits, slots JSON, version, window, daily_limit, active)`, `pack_openings(id, user_id, product_id, version, tx_id, cards JSON, created_at)`, `pack_pity(user_id, product_id, since_rare)`.
+
+API: `GET /api/packs` (produtos + probabilidades), `POST /api/packs/:id/open` (`{expectedPrice}` + `Idempotency-Key`) → `{tx, cards, refunds, balances}`, `GET /api/me/packs/history`.
+
+UI: abertura com animação GSAP (as cartas viram uma a uma, brilho pela raridade) em `PackOpenView.vue`. A arte dos pacotes é gerada no Artlist ([03 §5](03-animacoes.md)).
+
 ## 6. API
 
 | Método | Rota | Corpo / resposta |

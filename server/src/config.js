@@ -10,8 +10,19 @@ function int(name, fallback) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function list(name) {
+  return (process.env[name] || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** Features that can be switched on with FEATURES (docs/sdd/README.md). Off unless listed. */
+export const FEATURES = ['accounts', 'shop', 'trades', 'animations', 'packs', 'payments', 'leagues', 'spectate'];
+
 /** Server configuration, overridable through environment variables. */
 export function loadConfig(overrides = {}) {
+  const dataDir = process.env.DATA_DIR || path.resolve(here, '../data');
   const config = {
     port: int('PORT', 8787),
     host: process.env.HOST || '0.0.0.0',
@@ -56,6 +67,22 @@ export function loadConfig(overrides = {}) {
     // Header that holds the client address, written by the platform in front (e.g. Fly-Client-IP).
     // When set it wins over TRUST_PROXY. Only use a header the proxy overwrites, never one it passes along.
     clientIpHeader: (process.env.CLIENT_IP_HEADER || '').trim().toLowerCase(),
+    // Persistent state: SQLite database and uploaded media. Mount a volume here in production.
+    dataDir,
+    dbFile: process.env.DB_FILE || path.join(dataDir, 'mop.sqlite'),
+    // Public address of the site (OAuth redirect URI, Origin check of API mutations).
+    publicUrl: (process.env.PUBLIC_URL || '').replace(/\/+$/, ''),
+    features: new Set(list('FEATURES').filter((f) => FEATURES.includes(f))),
+    googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    sessionSecret: process.env.SESSION_SECRET || '',
+    // Verified Google e-mails that get the owner role on login.
+    ownerEmails: list('OWNER_EMAILS').map((e) => e.toLowerCase()),
+    // JSON body limit of /api requests.
+    apiBodyBytes: int('API_BODY_BYTES', 64 * 1024),
+    // Requests per second (and burst) one client address may make to /api.
+    apiRateLimitPerSecond: int('API_RATE_LIMIT_PER_SECOND', 10),
+    apiRateLimitBurst: int('API_RATE_LIMIT_BURST', 60),
     ...overrides,
   };
   return config;

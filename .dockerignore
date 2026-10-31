@@ -1,6 +1,7 @@
 # Build context for the Dockerfile: sources + official cards/images only.
 node_modules
 server/node_modules
+server/data
 dist
 .git
 .github
@@ -13,3 +14,4 @@ public/thumb
 **/*.tmp
 **/.DS_Store
 pentest
+.anim-work

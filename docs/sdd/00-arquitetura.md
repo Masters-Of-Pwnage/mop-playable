@@ -56,9 +56,9 @@ Princípios:
 
 ## 3. Decisões de arquitetura (ADRs resumidos)
 
-### ADR-01 — Persistência: SQLite (better-sqlite3) em volume
+### ADR-01 — Persistência: SQLite (`node:sqlite`) em volume
 
-- **Decisão:** SQLite em modo WAL em `/data/mop.sqlite`, com `better-sqlite3` (síncrono). Migrações em SQL numerado (`server/migrations/NNN_nome.sql`) aplicadas no boot por um runner simples.
+- **Decisão:** SQLite em modo WAL em `/data/mop.sqlite`, com o módulo nativo `node:sqlite` (`DatabaseSync`, síncrono, sem dependência compilada; imagem em Node 24 LTS). Implementado em `server/src/db.js` (`openDb`, `migrate`, `transaction` com `BEGIN IMMEDIATE` e savepoints). Migrações em SQL numerado (`server/migrations/NNN_nome.sql`) aplicadas no boot por um runner simples.
 - **Por quê:** é um processo único e o volume é pequeno (centenas de jogadores). Com `BEGIN IMMEDIATE`, as escritas ficam serializadas e isso elimina a classe inteira de *race conditions* de saldo (gasto duplo) sem precisar de locks distribuídos. Também não acrescenta outro serviço ao stack do Portainer.
 - **Alternativa:** PostgreSQL como segundo serviço do stack. Fica para quando houver mais de uma réplica. O acesso a dados passa por `server/src/db/*` (repositórios) para permitir a troca.
 - **Consequência:** o container deixa de ser stateless. É preciso ter volume, backup (`sqlite3 .backup` diário via cron do host ou sidecar) e restore documentado em `lab_admin/README.md`.
@@ -115,6 +115,8 @@ CREATE TABLE users (
   role          TEXT NOT NULL DEFAULT 'player' CHECK (role IN ('player','moderator','admin','owner')),
   status        TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','suspended','banned','deleted')),
   trade_locked_until INTEGER,                      -- epoch ms; conta nova / punição
+  adult_confirmed_at INTEGER,                      -- declaração de maioridade (pacotes, 02 RF-2.28)
+  show_avatar   INTEGER NOT NULL DEFAULT 0,
   created_at    INTEGER NOT NULL,
   last_login_at INTEGER
 );

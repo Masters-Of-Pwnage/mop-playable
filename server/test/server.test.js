@@ -2,6 +2,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
+import net from 'node:net';
 import path from 'node:path';
 import WebSocket from 'ws';
 import { createServer } from '../src/server.js';
@@ -14,7 +15,7 @@ before(async () => {
   staticDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mop-web-'));
   fs.writeFileSync(path.join(staticDir, 'index.html'), '<html>jogo</html>');
   fs.writeFileSync(path.join(staticDir, 'game.wasm'), 'wasm');
-  server = createServer({ staticDir, rateLimitBurst: 400, joinFailuresPerMinute: 3, reconnectGraceMs: 2000 });
+  server = createServer({ staticDir, dbFile: ':memory:', rateLimitBurst: 400, joinFailuresPerMinute: 3, reconnectGraceMs: 2000 });
   const addr = await server.listen(0, '127.0.0.1');
   base = `127.0.0.1:${addr.port}`;
 });
@@ -169,4 +170,38 @@ test('rejects bad input, big payloads and code brute force', async () => {
   anon.send({ type: 'list' });
   assert.equal((await anon.next('error')).code, 'not_ready');
   anon.close();
+});
+
+/** Sends a raw HTTP request (lets the test use targets fetch() would normalize). */
+function rawRequest(target) {
+  return new Promise((resolve, reject) => {
+    const [host, port] = base.split(':');
+    const sock = net.connect(Number(port), host, () => sock.write(`GET ${target} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n`));
+    let data = '';
+    sock.on('data', (d) => { data += d; });
+    sock.on('end', () => resolve(data));
+    sock.on('error', reject);
+  });
+}
+
+test('api: JSON errors, odd request targets and health db flag', async () => {
+  const missing = await fetch(`http://${base}/api/nope`);
+  assert.equal(missing.status, 404);
+  assert.equal(missing.headers.get('cache-control'), 'no-store');
+  assert.equal((await missing.json()).error, 'not_found');
+  assert.match(await rawRequest('//'), /^HTTP\/1\.1 400/);
+  const post = await fetch(`http://${base}/index.html`, { method: 'POST' });
+  assert.equal(post.status, 404);
+  const health = await (await fetch(`http://${base}/health`)).json();
+  assert.equal(health.db, true);
+});
+
+test('api: per-address rate limit', async () => {
+  const limited = createServer({ staticDir, dbFile: ':memory:', apiRateLimitPerSecond: 1, apiRateLimitBurst: 3 });
+  const addr = await limited.listen(0, '127.0.0.1');
+  const statuses = [];
+  for (let i = 0; i < 5; i += 1) statuses.push((await fetch(`http://127.0.0.1:${addr.port}/api/rooms`)).status);
+  await limited.close();
+  assert.deepEqual(statuses.slice(0, 3), [200, 200, 200]);
+  assert.equal(statuses[4], 429);
 });
