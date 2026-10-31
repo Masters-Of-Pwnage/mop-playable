@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "cards": "node scripts/build-cards.mjs && node scripts/build-starter-decks.mjs",
     "prebuild": "node scripts/build-cards.mjs && node scripts/build-starter-decks.mjs",
-    "test": "node --test tests/",
+    "test": "node --test \"tests/*.test.mjs\"",
     "server": "npm --prefix server start"
   },
   "dependencies": {
