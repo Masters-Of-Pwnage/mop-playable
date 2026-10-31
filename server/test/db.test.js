@@ -98,3 +98,17 @@ test('backups: consistent copy, pruned to the newest N', async () => {
   db.close();
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('N-14 database and backups are private to the server user (0600 files, 0700 directory)', async () => {
+  const { runBackup } = await import('../src/backup.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mop-bak-'));
+  const config = { dataDir: dir, backupKeep: 2, dbFile: path.join(dir, 'mop.sqlite') };
+  const db = openDb(config.dbFile);
+  migrate(db);
+  const file = runBackup(db, config, new Date('2026-10-31T00:00:00Z'));
+  assert.equal(fs.statSync(config.dbFile).mode & 0o777, 0o600);
+  assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+  assert.equal(fs.statSync(path.dirname(file)).mode & 0o077, 0);
+  db.close();
+  fs.rmSync(dir, { recursive: true, force: true });
+});

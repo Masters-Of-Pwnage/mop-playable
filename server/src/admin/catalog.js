@@ -70,9 +70,13 @@ export function planChanges(row, changes, defaults) {
   const next = { ...row, ...updates };
   if (next.available_from !== null && next.available_until !== null && next.available_from >= next.available_until) return { error: 'invalid_value', field: 'availableUntil' };
   if (next.stock_total !== null && next.stock_total < next.stock_sold) return { error: 'invalid_value', field: 'stockTotal' };
-  const e = effective(next, defaults);
-  if (e.sellPrice > e.price) return { error: 'invalid_value', field: 'sellPrice' };
+  // The raw value: effective() clamps the sell price, which would hide the mistake.
+  if (rawSellPrice(next, defaults) > effective(next, defaults).price) return { error: 'invalid_value', field: 'sellPrice' };
   return { updates, next };
+}
+
+function rawSellPrice(row, defaults) {
+  return row.sell_credits ?? defaults[row.rarity].sell_credits;
 }
 
 function diff(before, after) {
@@ -157,13 +161,13 @@ export function registerAdminCatalog(app, { db, config }) {
     return (uid) => ({ owners: owners.get(uid) || 0, sold7d: sold.get(uid) || 0 });
   }
 
-  app.get('/api/admin/catalog', { preValidation: g.staff }, async () => {
+  app.get('/api/admin/catalog', { onRequest: g.staff }, async () => {
     const defaults = rarityDefaults(db);
     const s = stats();
     return { cards: db.prepare('SELECT * FROM card_catalog ORDER BY name').all().map((r) => adminEntry(r, defaults, s(r.uid))) };
   });
 
-  app.get('/api/admin/catalog/:uid', { preValidation: g.staff }, async (req, reply) => {
+  app.get('/api/admin/catalog/:uid', { onRequest: g.staff }, async (req, reply) => {
     const row = db.prepare('SELECT * FROM card_catalog WHERE uid = ?').get(req.params.uid);
     if (!row) return reply.code(404).send(apiError('not_found'));
     const history = db.prepare(`SELECT a.id, a.action, a.before, a.after, a.created_at, u.display_name AS actor FROM audit_log a
@@ -174,7 +178,7 @@ export function registerAdminCatalog(app, { db, config }) {
   });
 
   /** Optimistic locking: If-Match carries the updatedAt the admin was looking at (CA-4.8). */
-  app.patch('/api/admin/catalog/:uid', { preValidation: g.admin }, async (req, reply) => {
+  app.patch('/api/admin/catalog/:uid', { onRequest: g.admin }, async (req, reply) => {
     const result = transaction(db, () => {
       const row = db.prepare('SELECT * FROM card_catalog WHERE uid = ?').get(req.params.uid);
       if (!row) return { status: 404, body: apiError('not_found') };
@@ -194,7 +198,7 @@ export function registerAdminCatalog(app, { db, config }) {
    * per card without writing (CA-4.3); any invalid card fails the whole request.
    */
   app.post('/api/admin/catalog/bulk', {
-    preValidation: g.admin,
+    onRequest: g.admin,
     schema: {
       body: {
         type: 'object',
@@ -229,7 +233,7 @@ export function registerAdminCatalog(app, { db, config }) {
     return reply.code(result.status).send(result.body);
   });
 
-  app.get('/api/admin/catalog/export.csv', { preValidation: g.staff }, async (_req, reply) => {
+  app.get('/api/admin/catalog/export.csv', { onRequest: g.staff }, async (_req, reply) => {
     const defaults = rarityDefaults(db);
     const lines = [CSV_COLUMNS.join(',')];
     for (const r of db.prepare('SELECT * FROM card_catalog WHERE orphan = 0 ORDER BY name').all()) {
@@ -242,7 +246,7 @@ export function registerAdminCatalog(app, { db, config }) {
 
   /** CSV import: dry run with the diff first; an unknown uid or bad value rejects the whole file (CA-4.4). */
   app.post('/api/admin/catalog/import', {
-    preValidation: g.admin,
+    onRequest: g.admin,
     bodyLimit: 1024 * 1024,
     schema: { body: { type: 'object', required: ['csv'], properties: { csv: { type: 'string', maxLength: 1_000_000 }, dryRun: { type: 'boolean' } } } },
   }, async (req, reply) => {
@@ -272,17 +276,24 @@ export function registerAdminCatalog(app, { db, config }) {
     return reply.code(result.status).send(result.body);
   });
 
-  app.get('/api/admin/rarity-defaults', { preValidation: g.staff }, async () => ({
+  app.get('/api/admin/rarity-defaults', { onRequest: g.staff }, async () => ({
     rarities: db.prepare('SELECT rarity, price_credits AS price, sell_credits AS sellPrice FROM rarity_defaults ORDER BY sort').all().map((r) => ({ ...r })),
   }));
 
   app.put('/api/admin/rarity-defaults/:rarity', {
-    preValidation: g.admin,
+    onRequest: g.admin,
     schema: { body: { type: 'object', required: ['price', 'sellPrice'], additionalProperties: false, properties: { price: { type: 'integer', minimum: 0 }, sellPrice: { type: 'integer', minimum: 0 } } } },
   }, async (req, reply) => {
     const before = db.prepare('SELECT * FROM rarity_defaults WHERE rarity = ?').get(req.params.rarity);
     if (!before) return reply.code(404).send(apiError('not_found'));
     if (req.body.sellPrice > req.body.price) return reply.code(400).send({ ...apiError('invalid_value'), field: 'sellPrice' });
+    // Cards of this rarity that override only one of the two prices must stay valid too (N-6).
+    const next = { ...rarityDefaults(db), [before.rarity]: { ...before, price_credits: req.body.price, sell_credits: req.body.sellPrice } };
+    const bad = db.prepare('SELECT * FROM card_catalog WHERE rarity = ? AND orphan = 0').all(before.rarity)
+      .filter((row) => rawSellPrice(row, next) > effective(row, next).price);
+    if (bad.length) {
+      return reply.code(400).send({ ...apiError('invalid_value', `Revenda acima do preço em: ${bad.slice(0, 5).map((b) => b.name).join(', ')}${bad.length > 5 ? '…' : ''}.`), field: 'sellPrice', uids: bad.map((b) => b.uid) });
+    }
     transaction(db, () => {
       db.prepare('UPDATE rarity_defaults SET price_credits = ?, sell_credits = ? WHERE rarity = ?').run(req.body.price, req.body.sellPrice, req.params.rarity);
       audit(db, { actor: req.auth.user.id, action: 'rarity.update', target: `rarity:${req.params.rarity}`, before: { price: before.price_credits, sellPrice: before.sell_credits }, after: req.body, ip: req.clientIp });

@@ -205,3 +205,23 @@ test('api: per-address rate limit', async () => {
   assert.deepEqual(statuses.slice(0, 3), [200, 200, 200]);
   assert.equal(statuses[4], 429);
 });
+
+test('N-4 security headers: page CSP on HTML, locked-down CSP on API, health and 404', async () => {
+  const page = await fetch(`http://${base}/`);
+  const csp = page.headers.get('content-security-policy');
+  assert.match(csp, /default-src 'self'/);
+  assert.match(csp, /frame-ancestors 'none'/);
+  assert.doesNotMatch(csp, /unsafe-inline|unsafe-eval/);
+  assert.equal(page.headers.get('x-frame-options'), 'DENY');
+  assert.equal(page.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
+  for (const url of ['/api/features', '/health', '/api/nada', '/nada.txt']) {
+    const res = await fetch(`http://${base}${url}`);
+    assert.match(res.headers.get('content-security-policy') || '', /default-src 'none'.*sandbox/, url);
+    assert.equal(res.headers.get('x-frame-options'), 'DENY', url);
+    assert.equal(res.headers.get('x-content-type-options'), 'nosniff', url);
+  }
+  const wasm = await fetch(`http://${base}/game.wasm`);
+  assert.equal(wasm.headers.get('x-frame-options'), 'DENY');
+  // Plain HTTP: no HSTS.
+  assert.equal(page.headers.get('strict-transport-security'), null);
+});

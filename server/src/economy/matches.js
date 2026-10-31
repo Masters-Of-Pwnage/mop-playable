@@ -1,4 +1,5 @@
 import { transaction } from '../db.js';
+import { isActive } from '../auth/session.js';
 import { Kind } from '../../../src/engine/cards.js';
 import { MINT, post, userOwner } from './ledger.js';
 import { gameDay, getSetting } from './settings.js';
@@ -68,7 +69,12 @@ export function settleMatch(db, { code, users, reports, startedAt }, now = Date.
     const pairRewarded = db.prepare(`SELECT COUNT(*) AS n FROM match_results WHERE rewarded = 1 AND created_at >= ?
                                      AND ((p0_user = ? AND p1_user = ?) OR (p0_user = ? AND p1_user = ?))`).get(dayStart, users[0], users[1], users[1], users[0]).n;
     const rewards = [];
-    if (status === 'consenso' && pairRewarded < 2) {
+    // A banned or deleted account may still hold a seat for a moment: it never gets paid (N-12).
+    const allActive = users.every((id) => {
+      const u = db.prepare('SELECT status, suspended_until FROM users WHERE id = ?').get(id);
+      return u && isActive(u, now);
+    });
+    if (status === 'consenso' && pairRewarded < 2 && allActive) {
       const part = getSetting(db, 'economy.match_participation_cr');
       const win = getSetting(db, 'economy.match_win_cr');
       users.forEach((userId, seat) => {

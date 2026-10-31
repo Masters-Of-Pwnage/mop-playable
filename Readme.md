@@ -86,6 +86,12 @@ Variáveis de ambiente (todas opcionais):
 | `CLIENT_IP_HEADER` | (vazio) | Cabeçalho com o IP do cliente escrito pela plataforma (no Fly: `Fly-Client-IP`). Tem prioridade sobre `TRUST_PROXY`. Só use um cabeçalho que o proxy sobrescreve. |
 | `MAX_ROOMS_PER_IP`, `MAX_BUFFERED_BYTES`, `MAX_TOTAL_BUFFERED_BYTES`, `MAX_SOCKET_BACKLOG_BYTES`, `RATE_LIMIT_BYTES_PER_SECOND`, `RATE_LIMIT_BURST_BYTES` | 5, 8 MiB, 64 MiB, 4 MiB, 2 MiB, 8 MiB | Tetos por IP e em bytes (fila de quem caiu, fila de quem não lê, tráfego por conexão). |
 | `CROSS_ORIGIN_ISOLATION` | `0` | Envia cabeçalhos COOP/COEP. |
+| `TRUSTED_PROXIES` | (qualquer) | CIDRs dos proxies que podem informar o IP do cliente (`CLIENT_IP_HEADER`/`X-Forwarded-For`). Vindo de outro endereço, vale o IP da conexão. Defina sempre que algo além do proxy alcançar a porta do servidor. |
+| `ADMIN_ALLOW_CIDRS` | (qualquer) | CIDRs que podem usar `/api/admin/*` (ex.: rede de casa e VPN). Fora da lista: 403 antes do login. |
+| `REQUEST_TIMEOUT_SECONDS` | `30` | Prazo para receber uma requisição HTTP inteira (cabeçalhos + corpo). |
+| `CSP_MODE` | `enforce` | `report` manda a CSP das páginas como `Report-Only` (só para diagnosticar um asset novo). |
+| `PRIVACY_CONTROLLER`, `PRIVACY_CONTACT` | (vazio) | Controlador dos dados e canal do titular (e-mail ou URL https) exibidos no aviso de privacidade. |
+| `BACKUP_HOURS`, `BACKUP_KEEP` | `24`, `7` | Cópia do SQLite em `DATA_DIR/backups` (0600). A cópia externa cifrada e o ensaio de restauração ficam em `scripts/ops/` (restic). |
 
 ## Deploy
 

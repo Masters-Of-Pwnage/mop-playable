@@ -14,7 +14,7 @@ import { applyFlagOverrides, registerAdmin } from './admin/admin.js';
 import { registerAdminCatalog } from './admin/catalog.js';
 import { registerAnimations } from './admin/animations.js';
 import { registerGoogleAuth } from './auth/google.js';
-import { purgeExpiredSessions, readSession, SESSION_COOKIE } from './auth/session.js';
+import { purgeExpiredSessions, readSession, SESSION_COOKIE, sessionEvents } from './auth/session.js';
 import { startBackups } from './backup.js';
 import { migrate, openDb } from './db.js';
 import { loadLibrary, starterCollection, syncCatalog } from './economy/catalog.js';
@@ -23,8 +23,30 @@ import { Bucket, KeyedLimiter } from './ratelimit.js';
 import { RoomManager } from './rooms.js';
 import { apiError } from './errors.js';
 import { serveStatic } from './static.js';
+import { securityHeaders } from './headers.js';
 import { cleanText, normalizeCode, parseMessage, ERRORS, PROTOCOL_VERSION, SUPPORTED_PROTOCOLS, MAX_NAME, MAX_ROOM_NAME } from './protocol.js';
 import { settleMatch, validateCollectionDeck } from './economy/matches.js';
+
+/** net.BlockList from "10.0.0.0/8, 2001:db8::/32, 192.0.2.7"; null for an empty list. */
+export function cidrList(entries) {
+  if (!entries?.length) return null;
+  const list = new net.BlockList();
+  for (const entry of entries) {
+    const [addr, bits] = entry.split('/');
+    const type = net.isIPv6(addr) ? 'ipv6' : 'ipv4';
+    if (!net.isIP(addr)) throw new Error(`endereço inválido em lista CIDR: ${entry}`);
+    if (bits === undefined) list.addAddress(addr, type);
+    else list.addSubnet(addr, Number(bits), type);
+  }
+  return list;
+}
+
+/** BlockList.check() wants the family; IPv4 seen through an IPv6 socket comes as ::ffff:a.b.c.d. */
+function inList(list, ip) {
+  const v4 = ip.startsWith('::ffff:') ? ip.slice(7) : ip;
+  if (net.isIPv4(v4)) return list.check(v4, 'ipv4');
+  return net.isIPv6(ip) && list.check(ip, 'ipv6');
+}
 
 /** URL parsing that never throws: a request target such as "//" makes `new URL(raw, base)` throw. */
 function safeUrl(raw) {
@@ -66,8 +88,11 @@ export function createServer(overrides = {}) {
   const rooms = new RoomManager(config);
   const ipConnections = new Map();
   const joinFailures = new Map(); // ip -> { count, resetAt }
-  const accountConnections = new Map(); // user id -> open sockets
+  const accountSockets = new Map(); // user id -> Map(ws -> session id hash it was opened with)
+  const lobbySockets = new WeakMap(); // lobby session -> the socket attached to it
   const apiLimiter = new KeyedLimiter(config.apiRateLimitPerSecond, config.apiRateLimitBurst);
+  const trustedProxies = cidrList(config.trustedProxies);
+  const adminAllow = cidrList(config.adminAllowCidrs);
 
   const app = Fastify({
     logger: false,
@@ -75,12 +100,20 @@ export function createServer(overrides = {}) {
     // The client address comes from clientIp(), which applies TRUST_PROXY / CLIENT_IP_HEADER.
     trustProxy: false,
     return503OnClosing: true,
+    // A body that trickles in must not hold memory forever (Fastify's default is no timeout). Route
+    // guards run as onRequest hooks, so an anonymous upload is refused before its body is read.
+    requestTimeout: config.requestTimeoutMs,
   });
+  app.server.headersTimeout = Math.min(15_000, config.requestTimeoutMs || 15_000);
   app.decorate('mop', { config, db, rooms });
   // Signs the short-lived OAuth state cookie. Without accounts nothing is signed: any secret will do.
   app.register(fastifyCookie, { secret: config.sessionSecret || randomBytes(32).toString('hex') });
   app.register(async (api) => {
-    api.get('/api/features', async () => ({ features: [...config.features] }));
+    api.get('/api/features', async () => ({
+      features: [...config.features],
+      // Who answers for the personal data and how to reach them (privacy notice, LGPD art. 9).
+      privacy: { controller: config.privacyController, contact: config.privacyContact },
+    }));
     if (!accounts) return;
     registerGoogleAuth(api, { db, config, starter });
     registerAccountRoutes(api, { db, config });
@@ -98,8 +131,12 @@ export function createServer(overrides = {}) {
     if (!safeUrl(req.raw.url)) return reply.code(400).type('text/plain; charset=utf-8').send('Bad request');
     req.clientIp = clientIp(req.raw);
     if (req.url.startsWith('/api/')) {
-      reply.header('Cache-Control', 'no-store').header('X-Content-Type-Options', 'nosniff');
+      reply.headers(securityHeaders(config)).header('Cache-Control', 'no-store');
       if (!apiLimiter.take(req.clientIp)) return reply.code(429).send(apiError('rate_limited'));
+      // The matched route, not the raw URL: "/api//admin" or "%2F" tricks cannot slip past it.
+      if (adminAllow && req.routeOptions.url?.startsWith('/api/admin/') && !inList(adminAllow, req.clientIp)) {
+        return reply.code(403).send(apiError('forbidden'));
+      }
     }
     return undefined;
   });
@@ -115,13 +152,13 @@ export function createServer(overrides = {}) {
     if (req.url.startsWith('/api/')) return reply.code(404).send(apiError('not_found'));
     reply.hijack();
     if (!serveStatic(req.raw, reply.raw, config)) {
-      reply.raw.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Not found');
+      reply.raw.writeHead(404, { ...securityHeaders(config), 'Content-Type': 'text/plain; charset=utf-8' }).end('Not found');
     }
     return undefined;
   });
 
   app.get('/health', async (_req, reply) => {
-    reply.header('Cache-Control', 'no-cache').header('X-Content-Type-Options', 'nosniff');
+    reply.headers(securityHeaders(config)).header('Cache-Control', 'no-cache');
     return { ok: true, protocol: PROTOCOL_VERSION, db: dbAlive(db), ...rooms.stats() };
   });
 
@@ -136,6 +173,8 @@ export function createServer(overrides = {}) {
 
   function clientIp(req) {
     const peer = req.socket.remoteAddress || 'unknown';
+    // Forwarding headers only count when the TCP peer is a known proxy (pentest N-5).
+    if (trustedProxies && !inList(trustedProxies, peer)) return peer;
     if (config.clientIpHeader) {
       // A platform that overwrites this header itself (Fly-Client-IP on Fly.io) is the best source.
       const v = String(req.headers[config.clientIpHeader] || '').trim();
@@ -170,14 +209,30 @@ export function createServer(overrides = {}) {
     const ip = clientIp(req);
     if ((ipConnections.get(ip) || 0) >= config.maxClientsPerIp) return reject(429, 'Too Many Requests');
     // Same-origin page with a session cookie: the lobby session is tied to the account.
-    const account = accounts ? readSession(db, app.parseCookie(req.headers.cookie || '')[SESSION_COOKIE])?.user || null : null;
-    if (account && (accountConnections.get(account.id) || 0) >= config.maxClientsPerAccount) return reject(429, 'Too Many Requests');
-    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req, ip, account));
+    const auth = accounts ? readSession(db, app.parseCookie(req.headers.cookie || '')[SESSION_COOKIE]) : null;
+    const account = auth?.user || null;
+    if (account && (accountSockets.get(account.id)?.size || 0) >= config.maxClientsPerAccount) return reject(429, 'Too Many Requests');
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req, ip, account, auth?.idHash));
   });
 
-  wss.on('connection', (ws, _req, ip, account) => {
+  // A revoked session (logout, ban, deletion, role change) closes the sockets opened with it; a
+  // revoked account also loses its seats, so nothing of it can be resumed (pentest N-12).
+  const onRevoked = (evDb, { userId, idHash }) => {
+    if (evDb !== db) return;
+    if (userId) rooms.dropUser(userId);
+    for (const [uid, socks] of accountSockets) {
+      if (userId && uid !== userId) continue;
+      for (const [ws, hash] of socks) if (userId || hash === idHash) ws.close(4001, 'account_revoked');
+    }
+  };
+  sessionEvents.on('revoked', onRevoked);
+
+  wss.on('connection', (ws, _req, ip, account, idHash) => {
     ipConnections.set(ip, (ipConnections.get(ip) || 0) + 1);
-    if (account) accountConnections.set(account.id, (accountConnections.get(account.id) || 0) + 1);
+    if (account) {
+      if (!accountSockets.has(account.id)) accountSockets.set(account.id, new Map());
+      accountSockets.get(account.id).set(ws, idHash);
+    }
     const bucket = new Bucket(config.rateLimitPerSecond, config.rateLimitBurst);
     const byteBucket = new Bucket(config.rateLimitBytesPerSecond, config.rateLimitBurstBytes);
     // ws re-emits frame errors (oversize, bad UTF-8, bad opcode, too many fragments) here and already
@@ -240,10 +295,10 @@ export function createServer(overrides = {}) {
       const left = (ipConnections.get(ip) || 1) - 1;
       if (left <= 0) ipConnections.delete(ip);
       else ipConnections.set(ip, left);
-      if (account) {
-        const open = (accountConnections.get(account.id) || 1) - 1;
-        if (open <= 0) accountConnections.delete(account.id);
-        else accountConnections.set(account.id, open);
+      const socks = account && accountSockets.get(account.id);
+      if (socks) {
+        socks.delete(ws);
+        if (!socks.size) accountSockets.delete(account.id);
       }
       if (session && session.transport === send) rooms.disconnect(session);
     });
@@ -259,6 +314,7 @@ export function createServer(overrides = {}) {
         const name = account ? account.display_name : cleanText(msg.name, MAX_NAME) || 'Hacker';
         session = rooms.createSession({ name, ip, transport: send });
         session.userId = account ? account.id : null;
+        lobbySockets.set(session, ws);
         const welcome = { type: 'welcome', id: session.id, token: session.token, protocol };
         if (account) welcome.account = { publicId: account.public_id, displayName: account.display_name };
         send(welcome);
@@ -266,16 +322,20 @@ export function createServer(overrides = {}) {
       }
       if (msg.type === 'resume') {
         const existing = rooms.findByToken(msg.token);
-        if (!existing) {
+        // The token alone is not enough: an account seat is only resumed by the same account
+        // (its cookie), a guest seat only by a guest (N-20).
+        if (!existing || existing.userId !== (account ? account.id : null)) {
           fail('bad_token');
           return;
         }
         if (existing.connected && existing.transport !== send) {
-          // An older socket is still attached: it is superseded by this one.
+          // An older socket is still attached: it is superseded by this one, and closed.
           const old = existing.transport;
           existing.transport = null;
           old({ type: 'error', code: 'bad_token', message: 'Sessão aberta em outra conexão.' });
+          lobbySockets.get(existing)?.close(4000, 'superseded');
         }
+        lobbySockets.set(existing, ws);
         session = existing;
         rooms.resume(session, send);
         return;
@@ -447,6 +507,7 @@ export function createServer(overrides = {}) {
     },
     async close() {
       clearInterval(joinSweep);
+      sessionEvents.off('revoked', onRevoked);
       stopBackups();
       rooms.dispose();
       for (const ws of wss.clients) ws.terminate();

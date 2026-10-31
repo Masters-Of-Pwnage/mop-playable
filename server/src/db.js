@@ -7,8 +7,10 @@ export const MIGRATIONS_DIR = path.resolve(path.dirname(fileURLToPath(import.met
 
 /** Opens (or creates) the SQLite database. ":memory:" is used by the tests. */
 export function openDb(file) {
-  if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
+  if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(file);
+  // Balances and e-mails: readable by the server's user only (SQLite gives -wal/-shm the same mode).
+  if (file !== ':memory:') fs.chmodSync(file, 0o600);
   db.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA synchronous = NORMAL;

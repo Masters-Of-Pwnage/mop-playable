@@ -60,7 +60,7 @@ export function registerAdmin(app, { db, config, rooms }) {
 
   // -------------------------------------------------------------- dashboard
 
-  app.get('/api/admin/dashboard', { preValidation: g.staff }, async () => {
+  app.get('/api/admin/dashboard', { onRequest: g.staff }, async () => {
     const now = Date.now();
     const day = 24 * 3600 * 1000;
     const one = (sql, ...args) => db.prepare(sql).get(...args);
@@ -86,11 +86,11 @@ export function registerAdmin(app, { db, config, rooms }) {
 
   // --------------------------------------------------------- settings/flags
 
-  app.get('/api/admin/settings', { preValidation: g.staff }, async () => ({
+  app.get('/api/admin/settings', { onRequest: g.staff }, async () => ({
     settings: Object.keys(DEFAULTS).map((key) => ({ key, value: getSetting(db, key), default: DEFAULTS[key] })),
   }));
 
-  app.put('/api/admin/settings/:key', { preValidation: g.admin, schema: { body: { type: 'object', required: ['value'] } } }, async (req, reply) => {
+  app.put('/api/admin/settings/:key', { onRequest: g.admin, schema: { body: { type: 'object', required: ['value'] } } }, async (req, reply) => {
     const { key } = req.params;
     if (!(key in DEFAULTS)) return reply.code(404).send(apiError('not_found'));
     const { value } = req.body;
@@ -108,12 +108,12 @@ export function registerAdmin(app, { db, config, rooms }) {
     return { key, value };
   });
 
-  app.get('/api/admin/flags', { preValidation: g.staff }, async () => ({
+  app.get('/api/admin/flags', { onRequest: g.staff }, async () => ({
     flags: FEATURES.map((name) => ({ name, on: config.features.has(name), runtime: RUNTIME_FLAGS.includes(name), ownerOnly: OWNER_FLAGS.includes(name) })),
   }));
 
   app.put('/api/admin/flags/:name', {
-    preValidation: g.admin,
+    onRequest: g.admin,
     schema: { body: { type: 'object', required: ['on'], additionalProperties: false, properties: { on: { type: 'boolean' } } } },
   }, async (req, reply) => {
     const { name } = req.params;
@@ -132,7 +132,7 @@ export function registerAdmin(app, { db, config, rooms }) {
   // ------------------------------------------------------------------ users
 
   app.get('/api/admin/users', {
-    preValidation: g.staff,
+    onRequest: g.staff,
     schema: { querystring: { type: 'object', properties: { q: { type: 'string', maxLength: 100 } } } },
   }, async (req) => {
     const q = (req.query.q || '').trim();
@@ -143,7 +143,7 @@ export function registerAdmin(app, { db, config, rooms }) {
     return { users: rows.map((u) => userSummary(u, req.auth.user)) };
   });
 
-  app.get('/api/admin/users/:publicId', { preValidation: g.staff }, async (req, reply) => {
+  app.get('/api/admin/users/:publicId', { onRequest: g.staff }, async (req, reply) => {
     const u = findUser(req.params.publicId);
     if (!u) return reply.code(404).send(apiError('not_found'));
     const one = (sql, ...a) => db.prepare(sql).get(...a);
@@ -166,7 +166,7 @@ export function registerAdmin(app, { db, config, rooms }) {
   const reasonSchema = { type: 'string', minLength: 3, maxLength: 300 };
 
   app.post('/api/admin/users/:publicId/status', {
-    preValidation: g.staff,
+    onRequest: g.staff,
     schema: {
       body: {
         type: 'object',
@@ -191,7 +191,7 @@ export function registerAdmin(app, { db, config, rooms }) {
   });
 
   app.post('/api/admin/users/:publicId/trade-lock', {
-    preValidation: g.staff,
+    onRequest: g.staff,
     schema: { body: { type: 'object', required: ['reason'], additionalProperties: false, properties: { until: { type: ['integer', 'null'] }, reason: reasonSchema } } },
   }, async (req, reply) => {
     const u = target(req, reply);
@@ -205,7 +205,7 @@ export function registerAdmin(app, { db, config, rooms }) {
   });
 
   app.post('/api/admin/users/:publicId/revoke-sessions', {
-    preValidation: g.staff,
+    onRequest: g.staff,
     schema: { body: { type: 'object', required: ['reason'], properties: { reason: reasonSchema } } },
   }, async (req, reply) => {
     const u = target(req, reply);
@@ -219,7 +219,7 @@ export function registerAdmin(app, { db, config, rooms }) {
 
   /** Balance/collection adjustment: always a ledger transaction, never an UPDATE (04-admin §6). */
   app.post('/api/admin/users/:publicId/adjust', {
-    preValidation: [g.admin, stepUp],
+    onRequest: [g.admin, stepUp],
     schema: {
       body: {
         type: 'object',
@@ -272,7 +272,7 @@ export function registerAdmin(app, { db, config, rooms }) {
   });
 
   app.post('/api/admin/users/:publicId/role', {
-    preValidation: [g.owner, stepUp],
+    onRequest: [g.owner, stepUp],
     schema: { body: { type: 'object', required: ['role', 'reason'], additionalProperties: false, properties: { role: { enum: Object.keys(ROLE_RANK) }, reason: reasonSchema } } },
   }, async (req, reply) => {
     const u = target(req, reply);
@@ -288,7 +288,7 @@ export function registerAdmin(app, { db, config, rooms }) {
   // ----------------------------------------------------------------- ledger
 
   app.get('/api/admin/ledger', {
-    preValidation: g.staff,
+    onRequest: g.staff,
     schema: { querystring: { type: 'object', properties: { user: { type: 'string', maxLength: 20 }, kind: { type: 'string', maxLength: 40 }, before: { type: 'integer', minimum: 1 } } } },
   }, async (req) => {
     const where = ['t.id < ?'];
@@ -307,7 +307,7 @@ export function registerAdmin(app, { db, config, rooms }) {
     };
   });
 
-  app.get('/api/admin/ledger/:tx', { preValidation: g.staff }, async (req, reply) => {
+  app.get('/api/admin/ledger/:tx', { onRequest: g.staff }, async (req, reply) => {
     const t = db.prepare('SELECT * FROM ledger_tx WHERE id = ?').get(Number(req.params.tx));
     if (!t) return reply.code(404).send(apiError('not_found'));
     const reversedBy = db.prepare('SELECT id FROM ledger_tx WHERE reverses_tx_id = ?').get(t.id)?.id || null;
@@ -320,7 +320,7 @@ export function registerAdmin(app, { db, config, rooms }) {
 
   /** Reversal: a mirror transaction (RF-2.3); fails if the player already spent what it would take back. */
   app.post('/api/admin/ledger/:tx/reverse', {
-    preValidation: [g.admin, stepUp],
+    onRequest: [g.admin, stepUp],
     schema: { body: { type: 'object', required: ['reason'], additionalProperties: false, properties: { reason: reasonSchema } } },
   }, async (req, reply) => {
     const t = db.prepare('SELECT * FROM ledger_tx WHERE id = ?').get(Number(req.params.tx));
@@ -347,7 +347,7 @@ export function registerAdmin(app, { db, config, rooms }) {
   // ------------------------------------------------------------------ audit
 
   app.get('/api/admin/audit', {
-    preValidation: g.staff,
+    onRequest: g.staff,
     schema: { querystring: { type: 'object', properties: { action: { type: 'string', maxLength: 60 }, target: { type: 'string', maxLength: 200 }, before: { type: 'integer', minimum: 1 } } } },
   }, async (req) => {
     const where = ['a.id < ?'];
@@ -364,7 +364,7 @@ export function registerAdmin(app, { db, config, rooms }) {
 
   // ------------------------------------------------------------------ rooms
 
-  app.get('/api/admin/rooms', { preValidation: g.staff }, async () => ({
+  app.get('/api/admin/rooms', { onRequest: g.staff }, async () => ({
     rooms: [...rooms.rooms.values()].map((r) => ({
       code: r.code,
       name: r.name,
@@ -376,7 +376,7 @@ export function registerAdmin(app, { db, config, rooms }) {
   }));
 
   app.post('/api/admin/rooms/:code/close', {
-    preValidation: g.staff,
+    onRequest: g.staff,
     schema: { body: { type: 'object', required: ['reason'], properties: { reason: reasonSchema } } },
   }, async (req, reply) => {
     if (!rooms.closeRoom(String(req.params.code), 'admin')) return reply.code(404).send(apiError('room_not_found'));
@@ -386,7 +386,7 @@ export function registerAdmin(app, { db, config, rooms }) {
 
   // ----------------------------------------------------------------- system
 
-  app.get('/api/admin/health', { preValidation: g.staff }, async () => {
+  app.get('/api/admin/health', { onRequest: g.staff }, async () => {
     let dbBytes = null;
     try {
       if (config.dbFile !== ':memory:') dbBytes = fs.statSync(config.dbFile).size;

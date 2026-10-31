@@ -274,3 +274,58 @@ test('CA-4.9 dashboard and health with invariants', async () => {
   const audit = await mod.call('GET', '/api/admin/audit?action=catalog');
   assert.ok(audit.body.entries.length > 0);
 });
+
+test('N-6 rarity defaults cannot make a card sell above its price; effective sell price is capped', async () => {
+  const admin = account('admin');
+  const original = db.prepare("SELECT * FROM rarity_defaults WHERE rarity = 'comum'").get();
+  const card = db.prepare("SELECT * FROM card_catalog WHERE rarity = 'comum' AND kind != 'land' AND availability = 'loja' AND orphan = 0 LIMIT 1").get();
+  const restore = db.prepare('UPDATE card_catalog SET price_credits = ?, sell_credits = ? WHERE uid = ?');
+  try {
+    assert.equal((await admin.call('PATCH', `/api/admin/catalog/${card.uid}`, { price: 40, sellPrice: null })).status, 200);
+    const put = await admin.call('PUT', '/api/admin/rarity-defaults/comum', { price: 50, sellPrice: 50 });
+    assert.equal(put.status, 400);
+    assert.ok(put.body.uids.includes(card.uid));
+    // A state already stored before the fix: the catalog and the shop cap the sell price.
+    db.prepare("UPDATE rarity_defaults SET sell_credits = 50 WHERE rarity = 'comum'").run();
+    const listed = (await (await fetch(`${base}/api/catalog`, { cache: 'no-store' })).json()).cards.find((c) => c.uid === card.uid);
+    assert.ok(listed.sellPrice <= listed.price, JSON.stringify(listed));
+    const p = account('player');
+    const before = balances(db, p.user.id).CR;
+    assert.equal((await p.call('POST', '/api/shop/buy', { items: [{ uid: card.uid, qty: 1, expectedPrice: listed.price }] })).status, 200);
+    assert.equal((await p.call('POST', '/api/shop/sell', { items: [{ uid: card.uid, qty: 1, expectedPrice: listed.sellPrice }] })).status, 200);
+    assert.ok(balances(db, p.user.id).CR <= before);
+  } finally {
+    db.prepare("UPDATE rarity_defaults SET price_credits = ?, sell_credits = ? WHERE rarity = 'comum'").run(original.price_credits, original.sell_credits);
+    restore.run(card.price_credits, card.sell_credits, card.uid);
+  }
+});
+
+test('N-2 / N-5 ADMIN_ALLOW_CIDRS gates /api/admin by client address; forwarding headers only from trusted proxies', async () => {
+  const start = async (over) => {
+    const s = createServer({
+      dbFile: ':memory:', staticDir: '/nonexistent', features: new Set(['accounts']),
+      publicUrl: 'http://127.0.0.1', googleClientId: 'x', googleClientSecret: 'x', sessionSecret: 'x'.repeat(40),
+      trustProxy: 1, adminAllowCidrs: ['203.0.113.0/24', '2001:db8::/32'], ...over,
+    });
+    const { port } = await s.listen(0, '127.0.0.1');
+    return { s, url: `http://127.0.0.1:${port}` };
+  };
+  const status = (url, xff) => fetch(`${url}/api/admin/health`, { headers: xff ? { 'X-Forwarded-For': xff } : {} }).then((r) => r.status);
+  const a = await start({ trustedProxies: ['127.0.0.1/32'] });
+  try {
+    assert.equal(await status(a.url), 403); // the proxy itself is not on the list
+    assert.equal(await status(a.url, '198.51.100.7'), 403);
+    assert.equal(await status(a.url, '203.0.113.9'), 401); // allowed address: down to the login check
+    assert.equal(await status(a.url, '2001:db8::5'), 401);
+    assert.equal((await fetch(`${a.url}//api//admin/health`)).status, 404);
+    assert.equal((await fetch(`${a.url}/api/features`)).status, 200); // the rest of the API is untouched
+  } finally {
+    await a.s.close();
+  }
+  const b = await start({ trustedProxies: ['10.9.9.9/32'] });
+  try {
+    assert.equal(await status(b.url, '203.0.113.9'), 403); // header from an unknown peer is ignored
+  } finally {
+    await b.s.close();
+  }
+});

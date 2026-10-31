@@ -10,10 +10,12 @@ export function backupDir(config) {
 /** Consistent copy of the live database (VACUUM INTO), keeping the newest `config.backupKeep` files. */
 export function runBackup(db, config, now = new Date()) {
   const dir = backupDir(config);
-  fs.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  fs.chmodSync(dir, 0o700); // also a directory left 0755 by an older version
   const stamp = now.toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
   const file = path.join(dir, `mop-${stamp}.sqlite`);
   db.prepare('VACUUM INTO ?').run(file);
+  fs.chmodSync(file, 0o600);
   const old = listBackups(config).slice(config.backupKeep);
   for (const b of old) fs.rmSync(path.join(dir, b.name), { force: true });
   return file;

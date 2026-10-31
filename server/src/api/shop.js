@@ -161,7 +161,7 @@ export function registerShopRoutes(app, { db, config }) {
     };
   });
 
-  app.get('/api/me/wallet', { preValidation: auth }, async (req) => {
+  app.get('/api/me/wallet', { onRequest: auth }, async (req) => {
     const userId = req.auth.user.id;
     const day = gameDay();
     const converted = db.prepare(`SELECT COALESCE(SUM(json_extract(meta, '$.pwc')), 0) AS n FROM ledger_tx
@@ -173,11 +173,11 @@ export function registerShopRoutes(app, { db, config }) {
     };
   });
 
-  app.get('/api/me/collection', { preValidation: auth }, async (req) => ({ cards: collection(req.auth.user.id) }));
+  app.get('/api/me/collection', { onRequest: auth }, async (req) => ({ cards: collection(req.auth.user.id) }));
 
   /** Statement: the user's ledger entries, newest first, paged by transaction id. */
   app.get('/api/me/ledger', {
-    preValidation: auth,
+    onRequest: auth,
     schema: { querystring: { type: 'object', properties: { before: { type: 'integer', minimum: 1 }, limit: { type: 'integer', minimum: 1, maximum: 100 } } } },
   }, async (req) => {
     const userId = req.auth.user.id;
@@ -198,7 +198,7 @@ export function registerShopRoutes(app, { db, config }) {
   });
 
   app.post('/api/me/convert', {
-    preValidation: auth,
+    onRequest: auth,
     schema: { body: { type: 'object', required: ['pwc', 'expectedRate'], additionalProperties: false, properties: { pwc: { type: 'integer', minimum: 1, maximum: 1_000_000 }, expectedRate: { type: 'integer', minimum: 1 } } } },
   }, async (req, reply) => {
     const key = idempotencyKey(req, reply);
@@ -212,12 +212,12 @@ export function registerShopRoutes(app, { db, config }) {
     }
   });
 
-  app.post('/api/me/daily', { preValidation: auth }, async (req) => {
+  app.post('/api/me/daily', { onRequest: auth }, async (req) => {
     const result = claimDaily(db, req.auth.user.id);
     return { ...result, balances: balances(db, req.auth.user.id) };
   });
 
-  app.post('/api/shop/buy', { preValidation: auth, schema: { body: itemsSchema } }, async (req, reply) => {
+  app.post('/api/shop/buy', { onRequest: auth, schema: { body: itemsSchema } }, async (req, reply) => {
     if (!shopOpen()) return reply.code(403).send(apiError('shop_disabled'));
     const key = idempotencyKey(req, reply);
     if (!key) return reply;
@@ -230,7 +230,7 @@ export function registerShopRoutes(app, { db, config }) {
     }
   });
 
-  app.post('/api/shop/sell', { preValidation: auth, schema: { body: itemsSchema } }, async (req, reply) => {
+  app.post('/api/shop/sell', { onRequest: auth, schema: { body: itemsSchema } }, async (req, reply) => {
     if (!shopOpen()) return reply.code(403).send(apiError('shop_disabled'));
     const key = idempotencyKey(req, reply);
     if (!key) return reply;

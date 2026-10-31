@@ -7,7 +7,7 @@ import { reactive, readonly } from 'vue';
 
 const ENABLED = import.meta.env.VITE_ACCOUNTS !== '0';
 
-const state = reactive({ enabled: false, loaded: false, user: null, features: [] });
+const state = reactive({ enabled: false, loaded: false, user: null, features: [], privacy: { controller: '', contact: '' } });
 let csrfToken = '';
 let markReady;
 /** Resolves once the first loadAccount() finished (route guards wait for it). */
@@ -52,8 +52,9 @@ export async function loadAccount() {
     return;
   }
   try {
-    const { features } = await api('GET', '/features');
+    const { features, privacy } = await api('GET', '/features');
     state.features = features;
+    if (privacy) state.privacy = privacy;
     state.enabled = features.includes('accounts');
     if (state.enabled) await refreshMe();
   } catch {

@@ -44,7 +44,7 @@ export function registerPackRoutes(app, { db, config }) {
   });
 
   app.post('/api/packs/:id/open', {
-    preValidation: auth,
+    onRequest: auth,
     schema: { body: { type: 'object', required: ['expectedPrice'], additionalProperties: false, properties: { expectedPrice: { type: 'integer', minimum: 0 } } } },
   }, async (req, reply) => {
     if (!enabled()) return reply.code(403).send(apiError('packs_disabled'));
@@ -59,7 +59,7 @@ export function registerPackRoutes(app, { db, config }) {
     }
   });
 
-  app.get('/api/me/packs/history', { preValidation: auth }, async (req) => ({
+  app.get('/api/me/packs/history', { onRequest: auth }, async (req) => ({
     openings: db.prepare(`SELECT o.id, o.cards, o.pity, o.created_at, p.name FROM pack_openings o JOIN pack_products p ON p.id = o.product_id
                           WHERE o.user_id = ? ORDER BY o.id DESC LIMIT 50`).all(req.auth.user.id)
       .map((o) => ({ id: o.id, name: o.name, cards: JSON.parse(o.cards), pity: Boolean(o.pity), createdAt: o.created_at })),
@@ -83,7 +83,7 @@ export function registerPackRoutes(app, { db, config }) {
     },
   };
 
-  app.get('/api/admin/packs', { preValidation: g.staff }, async () => {
+  app.get('/api/admin/packs', { onRequest: g.staff }, async () => {
     const pool = pools(db);
     return {
       poolSizes: Object.fromEntries(Object.entries(pool).map(([r, list]) => [r, list.length])),
@@ -123,9 +123,9 @@ export function registerPackRoutes(app, { db, config }) {
     return { id };
   }
 
-  app.post('/api/admin/packs', { preValidation: g.admin, schema: { body: productSchema } }, async (req, reply) => save(req, reply, null));
+  app.post('/api/admin/packs', { onRequest: g.admin, schema: { body: productSchema } }, async (req, reply) => save(req, reply, null));
 
-  app.put('/api/admin/packs/:id', { preValidation: g.admin, schema: { body: productSchema } }, async (req, reply) => {
+  app.put('/api/admin/packs/:id', { onRequest: g.admin, schema: { body: productSchema } }, async (req, reply) => {
     const existing = db.prepare('SELECT * FROM pack_products WHERE id = ?').get(Number(req.params.id));
     if (!existing) return reply.code(404).send(apiError('not_found'));
     return save(req, reply, existing);

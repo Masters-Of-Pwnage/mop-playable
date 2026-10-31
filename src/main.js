@@ -1,3 +1,9 @@
+// Fonts are bundled: no request to Google from the visitor's browser (LGPD notice, CSP).
+import '@fontsource/rajdhani/latin-500.css';
+import '@fontsource/rajdhani/latin-600.css';
+import '@fontsource/rajdhani/latin-700.css';
+import '@fontsource/jetbrains-mono/latin-500.css';
+import '@fontsource/jetbrains-mono/latin-700.css';
 import './styles/main.css';
 import { createApp } from 'vue';
 import App from './App.vue';

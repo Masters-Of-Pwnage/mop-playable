@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream';
+import { securityHeaders } from './headers.js';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -53,7 +54,7 @@ export function serveStatic(req, res, config) {
   } catch {
     if (urlPath === '/config.json') {
       // No static config: tell the client to use this same server for the lobby.
-      sendJson(res, { server_url: config.publicWsUrl || '' });
+      sendJson(res, { server_url: config.publicWsUrl || '' }, 200, securityHeaders(config));
       return true;
     }
     return false;
@@ -71,9 +72,10 @@ export function serveStatic(req, res, config) {
   }
   const ext = path.extname(file).toLowerCase();
   const headers = {
+    // HTML gets the page CSP; SVG (which can carry script) the locked-down one.
+    ...securityHeaders(config, ext === '.html' ? 'page' : ext === '.svg' ? 'data' : 'common'),
     'Content-Type': MIME[ext] || 'application/octet-stream',
     'Content-Length': stat.size,
-    'X-Content-Type-Options': 'nosniff',
     // Big game files rarely change between deploys; HTML and the service worker must be fresh.
     'Cache-Control': ['.html', '.json', '.webmanifest'].includes(ext) || file.endsWith('.service.worker.js')
       ? 'no-cache'

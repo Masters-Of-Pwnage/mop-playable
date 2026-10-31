@@ -61,7 +61,7 @@ export function registerCodeRoutes(app, { db, config }) {
   const perIp = new KeyedLimiter(20 / 3600, 20);
 
   app.post('/api/me/redeem', {
-    preValidation: auth,
+    onRequest: auth,
     schema: { body: { type: 'object', required: ['code'], additionalProperties: false, properties: { code: { type: 'string', maxLength: 40 } } } },
   }, async (req, reply) => {
     const userKey = String(req.auth.user.id);
@@ -92,7 +92,7 @@ export function registerCodeRoutes(app, { db, config }) {
     },
   };
 
-  app.get('/api/admin/codes', { preValidation: g.staff }, async () => ({
+  app.get('/api/admin/codes', { onRequest: g.staff }, async () => ({
     batches: db.prepare(`SELECT b.*, u.display_name AS creator, (SELECT COALESCE(SUM(uses), 0) FROM redeem_codes WHERE batch_id = b.id) AS used
                          FROM redeem_batches b LEFT JOIN users u ON u.id = b.created_by ORDER BY b.id DESC`).all()
       .map((b) => ({ id: b.id, name: b.name, reward: JSON.parse(b.reward), codes: b.codes_count, maxUses: b.max_uses, used: b.used, expiresAt: b.expires_at, disabledAt: b.disabled_at, creator: b.creator, createdAt: b.created_at })),
@@ -100,7 +100,7 @@ export function registerCodeRoutes(app, { db, config }) {
 
   /** Creates a batch and returns its codes this one time; only their hashes are kept (RF-2.17). */
   app.post('/api/admin/codes', {
-    preValidation: [g.admin, stepUp],
+    onRequest: [g.admin, stepUp],
     schema: {
       body: {
         type: 'object',
@@ -138,7 +138,7 @@ export function registerCodeRoutes(app, { db, config }) {
   });
 
   app.post('/api/admin/codes/:id/disable', {
-    preValidation: g.admin,
+    onRequest: g.admin,
     schema: { body: { type: 'object', required: ['reason'], properties: { reason: { type: 'string', minLength: 3, maxLength: 300 } } } },
   }, async (req, reply) => {
     const res = db.prepare('UPDATE redeem_batches SET disabled_at = ? WHERE id = ? AND disabled_at IS NULL').run(Date.now(), Number(req.params.id));

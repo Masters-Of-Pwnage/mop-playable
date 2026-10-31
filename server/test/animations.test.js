@@ -2,6 +2,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -132,4 +133,20 @@ test('operator token: owner creates it, scope and revocation enforced, moderator
   assert.equal((await viaToken(created.body.token)).status, 401);
   assert.equal((await mod.call('POST', '/api/admin/animations/c-pw', files())).status, 403);
   assert.equal((await mod.call('POST', '/api/admin/animations/1/approve')).status, 403);
+});
+
+test('N-1 anonymous upload gets 401 before its body is read; request timeout is on', async () => {
+  const { port } = new URL(base);
+  const status = await new Promise((resolve, reject) => {
+    const req = http.request({ host: '127.0.0.1', port, method: 'POST', path: '/api/admin/animations/c-legend',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': 4 * 1024 * 1024 } }, (res) => resolve(res.statusCode));
+    req.on('error', () => {});
+    req.write('{"webm":"'); // 9 of the 4 MB announced
+    setTimeout(() => {
+      req.destroy();
+      reject(new Error('no answer: the server waited for the body before the guard'));
+    }, 1500);
+  });
+  assert.equal(status, 401);
+  assert.ok(server.httpServer.requestTimeout > 0 && server.httpServer.requestTimeout <= 60_000);
 });

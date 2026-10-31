@@ -6,6 +6,7 @@ import { transaction } from '../db.js';
 import { apiError } from '../errors.js';
 import { audit } from '../auth/users.js';
 import { adminGuards, ADMINS } from './guards.js';
+import { securityHeaders } from '../headers.js';
 
 export const MAX_ANIMATION_BYTES = 1024 * 1024; // per file (CA-3.5)
 export const DEFAULT_CROP = { x: 8.5, y: 11.5, w: 83, h: 42 }; // art window, same as scripts/anim/crop.mjs
@@ -111,10 +112,10 @@ export function registerAnimations(app, { db, config }) {
     }
     reply.hijack();
     reply.raw.writeHead(200, {
+      ...securityHeaders(config),
       'Content-Type': MEDIA_TYPES[path.extname(file)],
       'Content-Length': stat.size,
       'Cache-Control': 'public, max-age=31536000, immutable',
-      'X-Content-Type-Options': 'nosniff',
     });
     pipeline(fs.createReadStream(file), reply.raw, () => {});
     return reply;
@@ -133,7 +134,7 @@ export function registerAnimations(app, { db, config }) {
 
   const b64 = { type: 'string', maxLength: Math.ceil((MAX_ANIMATION_BYTES * 4) / 3) + 8 };
   app.post('/api/admin/animations/:uid', {
-    preValidation: uploader,
+    onRequest: uploader,
     bodyLimit: 4 * 1024 * 1024 + 64 * 1024,
     schema: {
       body: {
@@ -174,7 +175,7 @@ export function registerAnimations(app, { db, config }) {
     return { id, status: 'revisao', files };
   });
 
-  app.get('/api/admin/animations', { preValidation: g.staff }, async () => ({
+  app.get('/api/admin/animations', { onRequest: g.staff }, async () => ({
     animations: db.prepare(`SELECT a.*, k.name, k.rarity, k.animation_consent FROM animations a JOIN card_catalog k ON k.uid = a.card_uid
                             WHERE a.status <> 'arquivada' ORDER BY CASE a.status WHEN 'revisao' THEN 0 WHEN 'aprovada' THEN 1 ELSE 2 END, a.id DESC`).all().map(view),
   }));
@@ -203,19 +204,19 @@ export function registerAnimations(app, { db, config }) {
     };
   }
   const reasonBody = { body: { type: 'object', properties: { reason: { type: 'string', maxLength: 300 } } } };
-  app.post('/api/admin/animations/:id/approve', { preValidation: g.admin }, review('approve'));
-  app.post('/api/admin/animations/:id/reject', { preValidation: g.admin, schema: reasonBody }, review('reject'));
-  app.post('/api/admin/animations/:id/archive', { preValidation: g.admin, schema: reasonBody }, review('archive'));
+  app.post('/api/admin/animations/:id/approve', { onRequest: g.admin }, review('approve'));
+  app.post('/api/admin/animations/:id/reject', { onRequest: g.admin, schema: reasonBody }, review('reject'));
+  app.post('/api/admin/animations/:id/archive', { onRequest: g.admin, schema: reasonBody }, review('archive'));
 
   // ------------------------------------------------------------- tokens
 
-  app.get('/api/admin/tokens', { preValidation: g.owner }, async () => ({
+  app.get('/api/admin/tokens', { onRequest: g.owner }, async () => ({
     tokens: db.prepare(`SELECT t.id, t.label, t.scopes, t.created_at AS createdAt, t.expires_at AS expiresAt, t.revoked_at AS revokedAt, u.display_name AS owner
                         FROM api_tokens t JOIN users u ON u.id = t.user_id ORDER BY t.id DESC`).all().map((r) => ({ ...r })),
   }));
 
   app.post('/api/admin/tokens', {
-    preValidation: g.owner,
+    onRequest: g.owner,
     schema: { body: { type: 'object', required: ['label'], additionalProperties: false, properties: { label: { type: 'string', minLength: 2, maxLength: 60 }, days: { type: 'integer', minimum: 1, maximum: 90 } } } },
   }, async (req) => {
     const token = transaction(db, () => {
@@ -226,7 +227,7 @@ export function registerAnimations(app, { db, config }) {
     return { token, scopes: ['animations:write'], note: 'Copie agora: o token não será mostrado de novo.' };
   });
 
-  app.delete('/api/admin/tokens/:id', { preValidation: g.owner }, async (req) => {
+  app.delete('/api/admin/tokens/:id', { onRequest: g.owner }, async (req) => {
     transaction(db, () => {
       db.prepare('UPDATE api_tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL').run(Date.now(), Number(req.params.id));
       audit(db, { actor: req.auth.user.id, action: 'token.revoke', target: `token:${req.params.id}`, ip: req.clientIp });

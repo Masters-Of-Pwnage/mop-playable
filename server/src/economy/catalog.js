@@ -90,12 +90,17 @@ export function rarityDefaults(db) {
   return Object.fromEntries(db.prepare('SELECT * FROM rarity_defaults').all().map((r) => [r.rarity, r]));
 }
 
-/** Price, sell price and copy limit actually in force for a catalog row. */
+/**
+ * Price, sell price and copy limit actually in force for a catalog row. The sell price never goes
+ * above the price, whatever mix of card override and rarity default produced it: buy-and-sell
+ * must never create credits (pentest N-6).
+ */
 export function effective(row, defaults) {
   const d = defaults[row.rarity];
+  const price = row.price_credits ?? d.price_credits;
   return {
-    price: row.price_credits ?? d.price_credits,
-    sellPrice: row.sell_credits ?? d.sell_credits,
+    price,
+    sellPrice: Math.min(row.sell_credits ?? d.sell_credits, price),
     maxOwned: row.max_owned ?? (row.kind === Kind.LAND ? null : DEFAULT_MAX_COPIES),
   };
 }

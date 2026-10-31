@@ -68,6 +68,15 @@ export class RoomManager {
     return session;
   }
 
+  /** Account revoked (ban, logout-all, deletion): its seats are released and nothing is resumable. */
+  dropUser(userId) {
+    for (const s of [...this.sessions.values()]) {
+      if (s.userId !== userId) continue;
+      if (s.room) this.leaveRoom(s, 'left');
+      this._forget(s);
+    }
+  }
+
   findByToken(token) {
     return typeof token === 'string' ? this.sessions.get(token) || null : null;
   }

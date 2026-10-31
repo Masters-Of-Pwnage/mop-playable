@@ -49,7 +49,7 @@ export function registerTradeRoutes(app, { db, config }) {
   const findTrade = (id) => db.prepare('SELECT * FROM trades WHERE public_id = ?').get(String(id));
 
   app.get('/api/trades', {
-    preValidation: auth,
+    onRequest: auth,
     schema: { querystring: { type: 'object', properties: { box: { enum: ['in', 'out', 'history'] } } } },
   }, async (req) => {
     users.clear();
@@ -65,7 +65,7 @@ export function registerTradeRoutes(app, { db, config }) {
   });
 
   app.post('/api/trades', {
-    preValidation: auth,
+    onRequest: auth,
     schema: { body: { type: 'object', required: ['to', 'offer', 'request'], additionalProperties: false, properties: { to: { type: 'string', maxLength: 20 }, offer: sideSchema, request: sideSchema } } },
   }, async (req, reply) => {
     if (!enabled()) return reply.code(403).send(apiError('trades_disabled'));
@@ -80,7 +80,7 @@ export function registerTradeRoutes(app, { db, config }) {
   });
 
   app.post('/api/trades/:id/accept', {
-    preValidation: auth,
+    onRequest: auth,
     schema: { body: { type: 'object', required: ['contentHash'], additionalProperties: false, properties: { contentHash: { type: 'string', maxLength: 64 } } } },
   }, async (req, reply) => {
     if (!enabled()) return reply.code(403).send(apiError('trades_disabled'));
@@ -95,7 +95,7 @@ export function registerTradeRoutes(app, { db, config }) {
   });
 
   for (const action of ['decline', 'cancel']) {
-    app.post(`/api/trades/:id/${action}`, { preValidation: auth }, async (req, reply) => {
+    app.post(`/api/trades/:id/${action}`, { onRequest: auth }, async (req, reply) => {
       const t = findTrade(req.params.id);
       if (!t || (t.to_user !== req.auth.user.id && t.from_user !== req.auth.user.id)) return reply.code(404).send(apiError('not_found'));
       try {
@@ -108,14 +108,14 @@ export function registerTradeRoutes(app, { db, config }) {
     });
   }
 
-  app.get('/api/trades/matches', { preValidation: auth }, async (req) => ({ matches: tradeMatches(db, req.auth.user.id) }));
+  app.get('/api/trades/matches', { onRequest: auth }, async (req) => ({ matches: tradeMatches(db, req.auth.user.id) }));
 
-  app.get('/api/me/wishlist', { preValidation: auth }, async (req) => ({
+  app.get('/api/me/wishlist', { onRequest: auth }, async (req) => ({
     cards: db.prepare('SELECT card_uid AS uid, qty FROM wishlist WHERE user_id = ?').all(req.auth.user.id).map((r) => ({ ...r })),
   }));
 
   app.put('/api/me/wishlist', {
-    preValidation: auth,
+    onRequest: auth,
     schema: { body: { type: 'object', required: ['cards'], additionalProperties: false, properties: { cards: { type: 'array', maxItems: 300, items: { type: 'object', required: ['uid', 'qty'], additionalProperties: false, properties: { uid: { type: 'string', maxLength: 160 }, qty: { type: 'integer', minimum: 1, maximum: 60 } } } } } } },
   }, async (req, reply) => {
     const userId = req.auth.user.id;
@@ -133,7 +133,7 @@ export function registerTradeRoutes(app, { db, config }) {
 
   /** Partner search for a trade (display names are public in the lobby anyway). */
   app.get('/api/players', {
-    preValidation: auth,
+    onRequest: auth,
     schema: { querystring: { type: 'object', required: ['q'], properties: { q: { type: 'string', minLength: 2, maxLength: 40 } } } },
   }, async (req) => {
     const q = req.query.q.trim();
@@ -144,7 +144,7 @@ export function registerTradeRoutes(app, { db, config }) {
   });
 
   /** Spare copies a player could trade (above what a deck uses), to build the request side. */
-  app.get('/api/players/:publicId/spare', { preValidation: auth }, async (req, reply) => {
+  app.get('/api/players/:publicId/spare', { onRequest: auth }, async (req, reply) => {
     const u = db.prepare("SELECT id, public_id, display_name FROM users WHERE public_id = ? AND status = 'active'").get(String(req.params.publicId).toUpperCase());
     if (!u) return reply.code(404).send(apiError('user_not_found'));
     const cards = db.prepare(`SELECT c.card_uid AS uid, c.quantity - (CASE WHEN k.kind = 0 THEN ${KEEP_LANDS} ELSE ${KEEP_COPIES} END) AS qty
@@ -156,7 +156,7 @@ export function registerTradeRoutes(app, { db, config }) {
   // ------------------------------------------------------------------ admin
 
   app.get('/api/admin/trades', {
-    preValidation: g.staff,
+    onRequest: g.staff,
     schema: { querystring: { type: 'object', properties: { status: { type: 'string', maxLength: 20 } } } },
   }, async (req) => {
     users.clear();
@@ -169,7 +169,7 @@ export function registerTradeRoutes(app, { db, config }) {
 
   for (const action of ['approve', 'reject']) {
     app.post(`/api/admin/trades/:id/${action}`, {
-      preValidation: g.staff,
+      onRequest: g.staff,
       schema: { body: { type: 'object', required: ['reason'], properties: { reason: { type: 'string', minLength: 3, maxLength: 300 } } } },
     }, async (req, reply) => {
       const t = findTrade(req.params.id);

@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { EventEmitter } from 'node:events';
 import { apiError } from '../errors.js';
 
 export const SESSION_COOKIE = 'mop_sid';
@@ -41,12 +42,21 @@ export function isActive(user, now = Date.now()) {
   return user.status === 'suspended' && user.suspended_until !== null && user.suspended_until <= now;
 }
 
+/**
+ * 'revoked' (db, { userId } | { idHash }): fired on every revocation (logout, logout-all, ban,
+ * suspension, role change, account deletion) so the lobby closes the sockets opened with it.
+ */
+export const sessionEvents = new EventEmitter();
+sessionEvents.setMaxListeners(0); // one listener per server; the tests start many
+
 export function revokeSession(db, idHash) {
   db.prepare('DELETE FROM sessions WHERE id_hash = ?').run(idHash);
+  sessionEvents.emit('revoked', db, { idHash });
 }
 
 export function revokeUserSessions(db, userId) {
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
+  sessionEvents.emit('revoked', db, { userId });
 }
 
 export function purgeExpiredSessions(db) {

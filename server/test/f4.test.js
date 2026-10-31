@@ -11,6 +11,7 @@ import { grantSignup } from '../src/economy/grants.js';
 import { balances, checkInvariants, MINT, post, userOwner } from '../src/economy/ledger.js';
 import { drawPack } from '../src/economy/packs.js';
 import { setSetting } from '../src/economy/settings.js';
+import { settleMatch } from '../src/economy/matches.js';
 
 const fixtures = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const starter = [{ uid: 'c-common', qty: 1 }, { uid: 'c-land', qty: 12 }];
@@ -299,7 +300,7 @@ test('RF-2.27 pity forces a rare when nothing rare came out', () => {
 
 // ------------------------------------------------------------ collection rooms
 
-async function socket(token, { protocol = 2 } = {}) {
+async function socket(token, { protocol = 2, hello = true } = {}) {
   const ws = new WebSocket(`${base.replace('http', 'ws')}/ws`, token ? { headers: { cookie: `mop_sid=${token}` } } : {});
   const queue = [];
   const waiters = [];
@@ -322,6 +323,7 @@ async function socket(token, { protocol = 2 } = {}) {
       });
     },
   };
+  if (!hello) return c;
   c.send({ type: 'hello', name: 'X', protocol });
   c.welcome = await c.next('welcome');
   return c;
@@ -419,4 +421,81 @@ test('CA-2.7 / 2.9 / 2.10 collection room: deck validation, canonical lists, con
   b.ws.close();
   setSetting(db, 'match.min_seconds', 120);
   assert.deepEqual(checkInvariants(db), []);
+});
+
+// ------------------------------------------------------------ revocation (pentest N-12 / N-20)
+
+const closeCode = (c) => new Promise((resolve) => {
+  c.ws.once('close', (code) => resolve(code));
+  setTimeout(() => resolve('open'), 1000);
+});
+
+test('N-12 logout-all closes the account sockets and frees its seats for good', async () => {
+  const A = account();
+  const a = await socket(A.token);
+  a.send({ type: 'create', visibility: 'private', mode: 'colecao' });
+  const joined = await a.next('joined');
+  const closed = closeCode(a);
+  assert.equal((await A.call('POST', '/api/auth/logout-all')).status, 200);
+  assert.equal(await closed, 4001);
+  assert.equal(server.rooms.rooms.has(joined.room.code), false);
+  const g = await socket(null, { hello: false });
+  g.send({ type: 'resume', token: a.welcome.token });
+  assert.equal((await g.next('error')).code, 'bad_token');
+  g.ws.close();
+});
+
+test('N-12 a single logout closes only the sockets of that session', async () => {
+  const A = account();
+  const second = createSession(db, A.fresh(), { authTime: Date.now() });
+  const one = await socket(A.token);
+  const two = await socket(second);
+  const closed = closeCode(one);
+  assert.equal((await A.call('POST', '/api/auth/logout')).status, 200);
+  assert.equal(await closed, 4001);
+  assert.equal(two.ws.readyState, WebSocket.OPEN);
+  two.ws.close();
+});
+
+test('N-12 settleMatch pays nobody when a seat belongs to a banned account', () => {
+  const A = account();
+  const B = account();
+  db.prepare("UPDATE users SET status = 'banned' WHERE id = ?").run(B.user.id);
+  setSetting(db, 'match.min_seconds', 0);
+  const r = settleMatch(db, { code: 'N12X', users: [A.user.id, B.user.id], reports: [{ winnerSeat: 1, turns: 9 }, { winnerSeat: 1, turns: 9 }], startedAt: Date.now() - 1000 });
+  assert.equal(r.status, 'consenso');
+  assert.deepEqual(r.rewards, []);
+});
+
+test('N-20 an account seat is only resumed by the same account; the old socket is closed', async () => {
+  const A = account();
+  const B = account();
+  const a = await socket(A.token);
+  const other = await socket(B.token, { hello: false });
+  other.send({ type: 'resume', token: a.welcome.token });
+  assert.equal((await other.next('error')).code, 'bad_token');
+  const guest = await socket(null, { hello: false });
+  guest.send({ type: 'resume', token: a.welcome.token });
+  assert.equal((await guest.next('error')).code, 'bad_token');
+  const again = await socket(A.token, { hello: false });
+  const closed = closeCode(a);
+  again.send({ type: 'resume', token: a.welcome.token });
+  await again.next('resumed');
+  assert.equal(await closed, 4000);
+  for (const s of [other, guest, again]) s.ws.close();
+});
+
+test('N-15 LGPD export: wallet, ledger, collection, trades, matches, sessions with IP and security log', async () => {
+  const p = account();
+  db.prepare("UPDATE sessions SET ip = '203.0.113.9' WHERE user_id = ?").run(p.user.id);
+  const vet = account('player', { veteran: true });
+  makeVeteran(p.user.id);
+  await p.call('POST', '/api/trades', { to: vet.user.public_id, offer: { cards: [{ uid: 'c-land', qty: 1 }] }, request: {} });
+  const r = await p.call('GET', '/api/me/export');
+  assert.equal(r.status, 200);
+  for (const k of ['account', 'decks', 'wallet', 'ledger', 'collection', 'wishlist', 'trades', 'matches', 'redeemedCodes', 'packs', 'sessions', 'securityLog']) assert.ok(k in r.body, `falta ${k}`);
+  assert.ok(r.body.ledger.length > 0 && r.body.collection.length > 0 && r.body.matches.length > 0);
+  assert.equal(r.body.sessions[0].ip, '203.0.113.9');
+  assert.equal(r.body.trades[0].otherPlayer, vet.user.public_id);
+  assert.deepEqual(Object.keys(r.body.trades[0]).sort(), ['createdAt', 'direction', 'id', 'offer', 'otherPlayer', 'request', 'status']);
 });

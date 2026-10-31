@@ -69,6 +69,11 @@ export function loadConfig(overrides = {}) {
     // Header that holds the client address, written by the platform in front (e.g. Fly-Client-IP).
     // When set it wins over TRUST_PROXY. Only use a header the proxy overwrites, never one it passes along.
     clientIpHeader: (process.env.CLIENT_IP_HEADER || '').trim().toLowerCase(),
+    // Addresses (CIDR) of the proxies allowed to set CLIENT_IP_HEADER / X-Forwarded-For. Empty = any
+    // peer, which is only safe when nothing but the proxy can reach the server.
+    trustedProxies: list('TRUSTED_PROXIES'),
+    // When set, /api/admin/* only answers these client addresses (CIDR), whatever the login says.
+    adminAllowCidrs: list('ADMIN_ALLOW_CIDRS'),
     // Persistent state: SQLite database and uploaded media. Mount a volume here in production.
     dataDir,
     dbFile: process.env.DB_FILE || path.join(dataDir, 'mop.sqlite'),
@@ -94,6 +99,13 @@ export function loadConfig(overrides = {}) {
     ownerEmails: list('OWNER_EMAILS').map((e) => e.toLowerCase()),
     // JSON body limit of /api requests.
     apiBodyBytes: int('API_BODY_BYTES', 64 * 1024),
+    // Time a client has to send a whole HTTP request (headers + body).
+    requestTimeoutMs: int('REQUEST_TIMEOUT_SECONDS', 30) * 1000,
+    // Content-Security-Policy of the pages: "enforce" (default) or "report" (Report-Only).
+    cspMode: process.env.CSP_MODE === 'report' ? 'report' : 'enforce',
+    // Data controller and the channel for data subject requests, shown in the privacy notice.
+    privacyController: process.env.PRIVACY_CONTROLLER || '',
+    privacyContact: process.env.PRIVACY_CONTACT || '',
     // Requests per second (and burst) one client address may make to /api.
     apiRateLimitPerSecond: int('API_RATE_LIMIT_PER_SECOND', 10),
     apiRateLimitBurst: int('API_RATE_LIMIT_BURST', 60),
