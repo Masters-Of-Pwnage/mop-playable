@@ -40,6 +40,24 @@ Plano de ondas para o N2:
 
 O painel de admin mostra o custo acumulado por onda.
 
+### 2.1 Resultado do piloto (2026-10-31)
+
+Cartas: CleBeer, Wander (lendária, arte em 2010 px) e Dmr, Senhor das Máquinas (lendária, arte em 457 px). Custo total de 2 640 créditos, com saldo restante de 9 420.
+
+| Critério | Kling v3 Standard 720p, 5 s | **Seedance 2.0 Fast 480p, 4 s (escolhido)** |
+|---|---|---|
+| Custo por clipe | 400 | 480 |
+| Emenda do loop (diferença média entre primeiro e último quadro) | 12,6–20,1 (emenda visível, câmera deriva) | **5,7–7,7 (praticamente sem emenda)** |
+| Fidelidade do rosto | Muda um pouco; inseriu um objeto que não existe (retângulo neon) | Estável, inclusive a partir da arte de 457 px |
+| Tamanho bruto | 3,2–4,7 MB | **0,5–0,8 MB** |
+
+**Decisão:** Seedance 2.0 Fast 480p, 4 s, modo quadro inicial/final com `aspect_ratio: "4:3"` e sem áudio. Isso dispensa o crossfade da §3.4. Com 480 créditos por clipe e ~20 % de refação, a onda 1 (teto de 8 mil) cobre **~13 cartas**.
+
+Outras descobertas:
+- **216 das 308 imagens têm menos de 800 px de altura.** A janela da arte dessas cartas fica com ~380×190 px, e `crop.mjs` amplia para 1024 px de largura (lanczos) antes do upload.
+- A janela padrão foi corrigida para `x 8,5 %, y 11,5 %, w 83 %, h 42 %`, porque a medida inicial pegava a barra do nome e a borda.
+- O `ffmpeg` não está instalado na máquina do operador e é pré-requisito do `encode.mjs` (`brew install ffmpeg`).
+
 ## 3. Pipeline (offline, operado no Claude Code com o MCP do Artlist)
 
 ```mermaid
@@ -58,7 +76,7 @@ flowchart LR
 ### 3.1 Recorte da arte (`scripts/anim/crop.mjs`)
 
 - Lê de `images/` com `sharp` (já é devDependency) e escreve em `.anim-work/crops/<uid>.png` (ignorado no git e no docker).
-- Retângulo padrão, medido na moldura de 1500×2100: `x 7 %, y 9.5 %, w 86 %, h 43.5 %` (≈ 1290×915 px, proporção ~1,41:1). Pode ser sobrescrito por carta em `scripts/anim/crops.json`, porque player cards e molduras antigas variam.
+- Retângulo padrão (corrigido no piloto): `x 8,5 %, y 11,5 %, w 83 %, h 42 %` da carta. Recortes com menos de 1024 px de largura são ampliados (lanczos). Pode ser sobrescrito por carta em `scripts/anim/crops.json`, porque player cards e molduras antigas variam.
 - Gera `.anim-work/contact-sheet.html` com todos os recortes para conferência visual antes de gastar créditos.
 
 ### 3.2 Fila e prompts (`scripts/anim/queue.mjs`)
