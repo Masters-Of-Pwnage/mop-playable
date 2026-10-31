@@ -207,6 +207,24 @@ export class RoomManager {
     this._lobbyChanged(room);
   }
 
+  /** Closes a room for everyone in it (admin action). Returns false when the code is unknown. */
+  closeRoom(code, reason = 'admin') {
+    const room = this.rooms.get(code);
+    if (!room) return false;
+    for (const s of room.seats) {
+      if (!s) continue;
+      this.deliver(s, { type: 'room_closed', reason });
+      s.room = null;
+      s.seat = -1;
+      this._clearBuffer(s);
+      clearTimeout(s.awayTimer);
+      s.awayTimer = null;
+    }
+    this.rooms.delete(code);
+    this._lobbyChanged(room);
+    return true;
+  }
+
   markStarted(session) {
     if (session.room && session.seat === 0) {
       session.room.started = true;

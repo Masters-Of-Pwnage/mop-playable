@@ -7,6 +7,8 @@ import { WebSocketServer } from 'ws';
 import { loadConfig } from './config.js';
 import { registerAccountRoutes } from './api/me.js';
 import { registerShopRoutes } from './api/shop.js';
+import { applyFlagOverrides, registerAdmin } from './admin/admin.js';
+import { registerAdminCatalog } from './admin/catalog.js';
 import { registerGoogleAuth } from './auth/google.js';
 import { purgeExpiredSessions, readSession, SESSION_COOKIE } from './auth/session.js';
 import { migrate, openDb } from './db.js';
@@ -43,6 +45,7 @@ export function createServer(overrides = {}) {
   migrate(db);
   let starter = [];
   if (accounts) {
+    applyFlagOverrides(db, config);
     // The catalog overlay follows the built card list (cards/ itself is never touched).
     const library = loadLibrary(config);
     if (library) {
@@ -75,6 +78,8 @@ export function createServer(overrides = {}) {
     registerGoogleAuth(api, { db, config, starter });
     registerAccountRoutes(api, { db, config });
     registerShopRoutes(api, { db, config });
+    registerAdminCatalog(api, { db, config });
+    registerAdmin(api, { db, config, rooms });
   });
 
   app.addHook('onRequest', async (req, reply) => {

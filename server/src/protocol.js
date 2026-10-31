@@ -66,4 +66,7 @@ export const ERRORS = {
   limit_reached: 'Você atingiu o limite de compras desta carta.',
   max_owned: 'Você já tem o máximo de cópias desta carta.',
   not_sellable: 'Esta carta não pode ser vendida.',
+  step_up_required: 'Confirme sua identidade entrando de novo com o Google.',
+  edit_conflict: 'Outra pessoa alterou este item. Recarregue antes de salvar.',
+  invalid_value: 'Valor inválido.',
 };
