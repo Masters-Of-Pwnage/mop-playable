@@ -1,19 +1,18 @@
-import { fileURLToPath, URL } from 'node:url'
-
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
+import { fileURLToPath, URL } from 'node:url';
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
 
 // https://vite.dev/config/
+// BASE_PATH lets the same build be hosted at the site root (own server) or under
+// /mop-playable/ (GitHub Pages, the default, as in the original project).
 export default defineConfig({
-  plugins: [
-    vue(),
-    vueDevTools(),
-  ],
+  plugins: [vue()],
   resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    },
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
-  base: '/mop-playable/',
-})
+  base: process.env.BASE_PATH ?? '/mop-playable/',
+  build: {
+    target: 'es2020',
+    chunkSizeWarningLimit: 900,
+  },
+});

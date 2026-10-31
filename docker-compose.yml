@@ -1,0 +1,25 @@
+# Masters of Pwnage — site + lobby server (public/private rooms) in one container.
+#
+#   docker compose up -d --build        # builds the image from this folder
+#   docker compose up -d                # uses the image named below if already built/pulled
+#
+# Also usable as a Portainer stack (the image must exist on the Docker host or in a registry).
+services:
+  mop:
+    image: masters-of-pwnage:latest
+    build: .
+    container_name: masters-of-pwnage
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      PORT: "8787"
+      TRUST_PROXY: "0"   # port published directly; set to the number of reverse proxies in front (usually 1)
+      # PUBLIC_WS_URL: wss://mop.example.com/ws   # set when behind a reverse proxy with its own host name
+      # ALLOWED_ORIGINS: https://mop.example.com  # comma-separated; empty = any origin
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

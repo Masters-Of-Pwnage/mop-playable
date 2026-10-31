@@ -1,0 +1,66 @@
+name: Godot game (tests + builds)
+
+on:
+  push:
+    branches: ["main"]
+    paths: ["game/**", "cards/**", "images/**", "decks/**", ".github/workflows/godot-game.yml"]
+  pull_request:
+    paths: ["game/**", "cards/**", "images/**", "decks/**", ".github/workflows/godot-game.yml"]
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Godot ${{ env.GODOT_VERSION }} + export templates
+        run: |
+          set -e
+          V=${GODOT_VERSION}
+          URL=https://github.com/godotengine/godot-builds/releases/download/${V}-stable
+          wget -q ${URL}/Godot_v${V}-stable_linux.x86_64.zip
+          unzip -q Godot_v${V}-stable_linux.x86_64.zip
+          sudo mv Godot_v${V}-stable_linux.x86_64 /usr/local/bin/godot
+          wget -q ${URL}/Godot_v${V}-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates/${V}.stable
+          unzip -q Godot_v${V}-stable_export_templates.tpz
+          mv templates/* ~/.local/share/godot/export_templates/${V}.stable/
+
+      - name: Sync cards (../cards + ../images -> game/data, game/assets/cards)
+        run: godot --headless --path game --script res://tools/sync_cards.gd
+
+      - name: Import project
+        run: godot --headless --path game --import || true
+
+      - name: Check scripts
+        run: godot --headless --path game --script res://tools/check_scripts.gd
+
+      - name: Run tests
+        run: godot --headless --path game --quit-after 20000 res://tests/runner.tscn
+
+      - name: Export Linux / Windows / macOS
+        run: |
+          mkdir -p game/build/linux game/build/windows game/build/macos
+          godot --headless --path game --export-release "Linux"
+          godot --headless --path game --export-release "Windows"
+          godot --headless --path game --export-release "macOS"
+
+      - name: Smoke test exported Linux build
+        run: ./game/build/linux/MastersOfPwnage.x86_64 --headless -- --selftest
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: masters-of-pwnage-linux
+          path: game/build/linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: masters-of-pwnage-windows
+          path: game/build/windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: masters-of-pwnage-macos
+          path: game/build/macos

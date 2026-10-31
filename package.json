@@ -4,22 +4,29 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cards": "node scripts/build-cards.mjs && node scripts/build-starter-decks.mjs",
+    "prebuild": "node scripts/build-cards.mjs && node scripts/build-starter-decks.mjs",
+    "test": "node --test tests/",
+    "server": "npm --prefix server start"
   },
   "dependencies": {
     "@heroicons/vue": "^2.2.0",
+    "gsap": "^3.15.0",
     "jspdf": "^2.5.2",
     "uuid": "^11.0.3",
-    "vue": "^3.5.13"
+    "vue": "^3.5.13",
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
+    "sharp": "^0.35.5",
     "tailwindcss": "^3.4.16",
-    "vite": "^6.0.1",
+    "vite": "^6.4.5",
     "vite-plugin-vue-devtools": "^7.6.5"
   }
 }

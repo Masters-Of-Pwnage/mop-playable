@@ -1,3 +1,16 @@
 node_modules
 dist
-/public
+/public/cards.json
+/public/image/
+/public/thumb/
+
+# Godot game project (game/)
+game/.godot/
+game/addons/ziva_agent/
+game/assets/cards/
+game/data/cards.json
+game/build/
+*.tmp
+
+# Security assessment artifacts (may contain homelab details)
+pentest/

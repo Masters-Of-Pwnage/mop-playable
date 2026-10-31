@@ -1,0 +1,13 @@
+# Render.com blueprint (site + lobby server). WebSockets are supported on web services.
+services:
+  - type: web
+    name: masters-of-pwnage
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8787"
+      # One proxy hop assumed: check the real X-Forwarded-For of a test deploy (extra CDN hops change it).
+      - key: TRUST_PROXY
+        value: "1"
