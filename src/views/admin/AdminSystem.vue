@@ -12,6 +12,7 @@
           <span>Node {{ health.node }} · no ar há {{ Math.round(health.uptimeSeconds / 60) }} min</span>
           <span>Versão: {{ health.version || 'não informada' }}</span>
           <span>Migrações: {{ health.migrations.map((m) => m.name).join(', ') }}</span>
+          <span v-if="health.backups" :class="health.backups.latest ? '' : 'text-amber'">Último backup: {{ health.backups.latest ? `${fmtDate(health.backups.latest.at)} (${health.backups.count} guardados, a cada ${health.backups.every} h)` : 'nenhum ainda' }}</span>
         </div>
       </div>
     </div>

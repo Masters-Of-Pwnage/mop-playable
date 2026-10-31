@@ -6,6 +6,7 @@ import { audit } from '../auth/users.js';
 import { FEATURES } from '../config.js';
 import { balances, checkInvariants, EconomyError, MINT, post, reverseTransaction, SHOP, userOwner } from '../economy/ledger.js';
 import { DEFAULTS, getSetting, setSetting } from '../economy/settings.js';
+import { listBackups } from '../backup.js';
 import { adminGuards, canActOn, ROLE_RANK, stepUp } from './guards.js';
 
 /** Flags an admin may switch at runtime; `accounts` needs secrets and a restart, so it stays in FEATURES. */
@@ -394,6 +395,7 @@ export function registerAdmin(app, { db, config, rooms }) {
       invariants: checkInvariants(db),
       dbBytes,
       migrations: db.prepare('SELECT name, applied_at AS appliedAt FROM schema_migrations ORDER BY name').all().map((r) => ({ ...r })),
+      backups: { every: config.backupHours, keep: config.backupKeep, latest: listBackups(config)[0] || null, count: listBackups(config).length },
       version: process.env.APP_VERSION || null,
       node: process.version,
       uptimeSeconds: Math.round(process.uptime()),

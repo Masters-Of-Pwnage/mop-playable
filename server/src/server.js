@@ -15,6 +15,7 @@ import { registerAdminCatalog } from './admin/catalog.js';
 import { registerAnimations } from './admin/animations.js';
 import { registerGoogleAuth } from './auth/google.js';
 import { purgeExpiredSessions, readSession, SESSION_COOKIE } from './auth/session.js';
+import { startBackups } from './backup.js';
 import { migrate, openDb } from './db.js';
 import { loadLibrary, starterCollection, syncCatalog } from './economy/catalog.js';
 import { grantMissingSignups } from './economy/grants.js';
@@ -48,6 +49,7 @@ export function createServer(overrides = {}) {
   if (accounts) checkAccountsConfig(config);
   const db = openDb(config.dbFile);
   migrate(db);
+  const stopBackups = startBackups(db, config);
   let starter = [];
   if (accounts) {
     applyFlagOverrides(db, config);
@@ -445,6 +447,7 @@ export function createServer(overrides = {}) {
     },
     async close() {
       clearInterval(joinSweep);
+      stopBackups();
       rooms.dispose();
       for (const ws of wss.clients) ws.terminate();
       await new Promise((resolve) => wss.close(() => resolve()));

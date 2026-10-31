@@ -97,6 +97,9 @@ export function loadConfig(overrides = {}) {
     // Requests per second (and burst) one client address may make to /api.
     apiRateLimitPerSecond: int('API_RATE_LIMIT_PER_SECOND', 10),
     apiRateLimitBurst: int('API_RATE_LIMIT_BURST', 60),
+    // Database copies in DATA_DIR/backups every BACKUP_HOURS (0 = off), keeping the newest BACKUP_KEEP.
+    backupHours: int('BACKUP_HOURS', 24),
+    backupKeep: int('BACKUP_KEEP', 7),
     ...overrides,
   };
   return config;

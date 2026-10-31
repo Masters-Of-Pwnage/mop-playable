@@ -81,3 +81,20 @@ test('user role and status are constrained', () => {
   assert.throws(() => insert('superuser'), /CHECK/);
   db.close();
 });
+
+test('backups: consistent copy, pruned to the newest N', async () => {
+  const { runBackup, listBackups } = await import('../src/backup.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mop-bak-'));
+  const config = { dataDir: dir, backupKeep: 2, dbFile: path.join(dir, 'mop.sqlite') };
+  const db = openDb(config.dbFile);
+  migrate(db);
+  db.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('x', '1', 1)").run();
+  for (const t of ['2026-10-01T00:00:00Z', '2026-10-02T00:00:00Z', '2026-10-03T00:00:00Z']) runBackup(db, config, new Date(t));
+  const list = listBackups(config);
+  assert.deepEqual(list.map((b) => b.name), ['mop-20261003-000000.sqlite', 'mop-20261002-000000.sqlite']);
+  const copy = openDb(path.join(dir, 'backups', list[0].name));
+  assert.equal(copy.prepare("SELECT value FROM settings WHERE key = 'x'").get().value, '1');
+  copy.close();
+  db.close();
+  fs.rmSync(dir, { recursive: true, force: true });
+});
