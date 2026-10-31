@@ -18,8 +18,14 @@ if (!manifestArg || !token) {
   process.exit(1);
 }
 
-const manifest = JSON.parse(fs.readFileSync(path.resolve(manifestArg), 'utf8'));
-const resolve = (p) => (path.isAbsolute(p) ? p : path.resolve(root, p));
+const manifestPath = path.resolve(manifestArg);
+const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+// File paths in a manifest are relative to the manifest itself (wave-report.mjs writes "out/<slug>/...").
+const resolve = (p) => {
+  if (path.isAbsolute(p)) return p;
+  const near = path.resolve(path.dirname(manifestPath), p);
+  return fs.existsSync(near) ? near : path.resolve(root, p);
+};
 let sent = 0;
 for (const item of manifest) {
   if (item.status !== 'aprovada' || (only.length && !only.includes(item.uid))) continue;
