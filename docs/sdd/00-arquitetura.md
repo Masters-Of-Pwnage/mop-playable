@@ -290,6 +290,7 @@ Lista completa de endpoints nas especificações de cada feature.
 | `deck_ok {seat}` / `error deck_invalid` | S→C | |
 | `decks {lists:[[uid…],[uid…]]}` | S→host | Quando os dois seats estão validados, o host recebe as listas canônicas e precisa usá-las no `setup` |
 | `result {winnerSeat}` | C→S | Os dois clientes reportam. A recompensa só sai se os relatos baterem (ver economia) |
+| `deck_ok {seat, name, count}` / `match_result {status, reward}` | S→C | Confirmação do deck validado (para os dois seats) e resultado liquidado da partida (implementado na F4) |
 
 **Limitação conhecida:** como o host continua sendo a autoridade da partida, um cliente modificado ainda consegue trapacear dentro da partida. Por isso a recompensa de vitória é pequena e tem teto, e a de participação exige consenso. O caminho definitivo é rodar a engine no servidor (a engine é JS puro e roda em Node) para salas ranqueadas. Isso está previsto como fase F6.
 

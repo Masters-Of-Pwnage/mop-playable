@@ -219,3 +219,23 @@ Todas as mutações exigem `Idempotency-Key` e `X-CSRF-Token`.
 | Golpe de troca (bait-and-switch) | Ofertas imutáveis + `contentHash` no aceite |
 | Corrida de saldo / gasto duplo | `BEGIN IMMEDIATE` + `CHECK balance >= 0` + idempotência |
 | Admin malicioso ou conta admin comprometida | Step-up, audit log imutável, RBAC (ajustes acima de um teto exigem `owner`) |
+
+## 11. Notas de implementação (F4, 2026-10-31)
+
+Onde o código divergiu ou detalhou esta spec:
+
+- **Migrações:** `004_trades.sql`, `005_redeem_codes.sql`, `006_packs.sql` e `007_match_results.sql` (em vez das tabelas listadas em 00 §4).
+- **Revisão de troca desequilibrada (RF-2.15):** acontece na criação. A oferta nasce `em_revisao` e o destinatário só a vê depois da aprovação, que renova o prazo de 72 h. Quem participa da troca não pode revisá-la.
+- **Limite diário de trocas:** vale para ofertas criadas (remetente) e para trocas aceitas (destinatário), em janela de 24 h.
+- **Taxa:** cobrada de quem envia as PwnCoins. O destinatário recebe o valor menos 5 % (mínimo 1).
+- **"Pasta de troca":** é calculada, sem tabela própria. São as cópias acima de 4 (ou de 20, em cyberlands) de cartas trocáveis.
+- **Pacotes:**
+  - Cartas com estoque limitado ficam fora dos pacotes, porque o estoque é da loja.
+  - Raridades sem cartas elegíveis saem do sorteio e as demais são renormalizadas. As probabilidades publicadas já mostram isso.
+  - O anti-azar usa `packs.pity_n` (padrão 10) e força a última carta do pacote.
+- **Salas Coleção:**
+  - Além dos 4 turnos, a recompensa exige `match.min_seconds` (padrão 120 s) desde o `started`.
+  - Uma conta não entra na própria sala (`same_account`).
+  - O servidor manda `deck_ok` para os dois seats e `match_result` com a recompensa de cada um.
+  - Quem já tinha cliente v1 continua conectando (o servidor aceita os protocolos 1 e 2).
+- **Estorno:** o estorno de compra na loja não devolve estoque. O estorno de troca marca a troca como `revertida`.
