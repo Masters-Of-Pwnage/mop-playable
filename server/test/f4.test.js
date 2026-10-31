@@ -493,7 +493,7 @@ test('N-15 LGPD export: wallet, ledger, collection, trades, matches, sessions wi
   await p.call('POST', '/api/trades', { to: vet.user.public_id, offer: { cards: [{ uid: 'c-land', qty: 1 }] }, request: {} });
   const r = await p.call('GET', '/api/me/export');
   assert.equal(r.status, 200);
-  for (const k of ['account', 'decks', 'wallet', 'ledger', 'collection', 'wishlist', 'trades', 'matches', 'redeemedCodes', 'packs', 'sessions', 'securityLog']) assert.ok(k in r.body, `falta ${k}`);
+  for (const k of ['account', 'decks', 'wallet', 'ledger', 'collection', 'wishlist', 'trades', 'matches', 'redeemedCodes', 'packs', 'sessions', 'audit']) assert.ok(k in r.body, `falta ${k}`);
   assert.ok(r.body.ledger.length > 0 && r.body.collection.length > 0 && r.body.matches.length > 0);
   assert.equal(r.body.sessions[0].ip, '203.0.113.9');
   assert.equal(r.body.trades[0].otherPlayer, vet.user.public_id);

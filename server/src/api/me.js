@@ -123,7 +123,7 @@ export function registerAccountRoutes(app, { db, config }) {
         .map((p) => ({ ...p, cards: json(p.cards) })),
       sessions: all('SELECT created_at AS createdAt, expires_at AS expiresAt, ip, user_agent AS userAgent FROM sessions WHERE user_id = ?', id),
       // Security log: what was done to the account, and the account's own actions (without other people's data).
-      securityLog: all(`SELECT action, CASE WHEN target = ? THEN target ELSE NULL END AS target, ip, created_at AS createdAt
+      audit: all(`SELECT action, CASE WHEN target = ? THEN target ELSE NULL END AS target, ip, created_at AS createdAt
                         FROM audit_log WHERE target = ? OR actor_user_id = ? ORDER BY id`, `user:${id}`, `user:${id}`, id),
     };
   });
