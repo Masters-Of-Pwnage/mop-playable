@@ -1,13 +1,17 @@
 import { randomBytes } from 'node:crypto';
+import fs from 'node:fs';
 import net from 'node:net';
 import fastifyCookie from '@fastify/cookie';
 import Fastify from 'fastify';
 import { WebSocketServer } from 'ws';
 import { loadConfig } from './config.js';
 import { registerAccountRoutes } from './api/me.js';
+import { registerShopRoutes } from './api/shop.js';
 import { registerGoogleAuth } from './auth/google.js';
 import { purgeExpiredSessions, readSession, SESSION_COOKIE } from './auth/session.js';
 import { migrate, openDb } from './db.js';
+import { loadLibrary, starterCollection, syncCatalog } from './economy/catalog.js';
+import { grantMissingSignups } from './economy/grants.js';
 import { Bucket, KeyedLimiter } from './ratelimit.js';
 import { RoomManager } from './rooms.js';
 import { apiError } from './errors.js';
@@ -37,6 +41,18 @@ export function createServer(overrides = {}) {
   if (accounts) checkAccountsConfig(config);
   const db = openDb(config.dbFile);
   migrate(db);
+  let starter = [];
+  if (accounts) {
+    // The catalog overlay follows the built card list (cards/ itself is never touched).
+    const library = loadLibrary(config);
+    if (library) {
+      syncCatalog(db, library);
+      starter = starterCollection(library, JSON.parse(fs.readFileSync(config.starterDecksFile, 'utf8')));
+      grantMissingSignups(db, starter);
+    } else {
+      console.warn('[mop-server] AVISO: cards.json não encontrado; catálogo e kit inicial desativados');
+    }
+  }
   const rooms = new RoomManager(config);
   const ipConnections = new Map();
   const joinFailures = new Map(); // ip -> { count, resetAt }
@@ -56,8 +72,9 @@ export function createServer(overrides = {}) {
   app.register(async (api) => {
     api.get('/api/features', async () => ({ features: [...config.features] }));
     if (!accounts) return;
-    registerGoogleAuth(api, { db, config });
+    registerGoogleAuth(api, { db, config, starter });
     registerAccountRoutes(api, { db, config });
+    registerShopRoutes(api, { db, config });
   });
 
   app.addHook('onRequest', async (req, reply) => {

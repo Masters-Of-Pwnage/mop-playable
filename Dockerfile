@@ -18,6 +18,9 @@ COPY server/package.json server/package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
 COPY server/src ./src
 COPY server/migrations ./migrations
+# Rules engine and starter decks are shared with the server (catalog, starter collection).
+COPY src/engine /app/src/engine
+COPY src/data/starter-decks.json /app/src/data/starter-decks.json
 # SQLite database and uploaded media (mount a volume here; see docker-compose.yml).
 RUN mkdir -p /data && chown node:node /data
 VOLUME /data

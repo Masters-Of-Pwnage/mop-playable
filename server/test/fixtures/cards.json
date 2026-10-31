@@ -1,0 +1,8 @@
+[
+  { "id": "c-common", "name": "Script Kiddie", "cost": "{1}{B}", "type": "Criatura - Hacker", "description": "", "power": "1", "toughness": "1", "_file": "script-kiddie.json" },
+  { "id": "c-common2", "name": "Phishing", "cost": "{U}", "type": "Mágica Instantânea", "description": "Compre uma carta.", "_file": "phishing.json" },
+  { "id": "c-legend", "name": "Hacker Lendário", "cost": "{2}{B}{B}", "type": "Criatura Lendária - Hacker", "description": "", "power": "4", "toughness": "4", "_file": "hacker-lendario.json" },
+  { "id": "c-pw", "name": "Arquiteta", "cost": "{3}{U}", "type": "Planinauta - Arquiteta", "description": "", "loyalty": "3", "_file": "arquiteta.json" },
+  { "id": "c-land", "name": "RedZone", "cost": "", "type": "Cyberland", "description": "Adicione {B}.", "_file": "redzone.json" },
+  { "id": "c-player", "name": "Player Card X", "cost": "{G}", "type": "Player Card", "description": "", "power": "2", "toughness": "2", "_file": "player-x.json" }
+]

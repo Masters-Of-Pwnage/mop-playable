@@ -38,13 +38,13 @@ export function registerAccountRoutes(app, { db, config }) {
   const auth = requireUser(db, config);
   const features = () => [...config.features];
 
-  app.get('/api/me', { preHandler: auth }, async (req) => {
+  app.get('/api/me', { preValidation: auth }, async (req) => {
     const { user, csrfToken } = req.auth;
     return { ...profile(user), csrfToken, features: features() };
   });
 
   app.patch('/api/me', {
-    preHandler: auth,
+    preValidation: auth,
     schema: {
       body: {
         type: 'object',
@@ -69,24 +69,24 @@ export function registerAccountRoutes(app, { db, config }) {
     return profile(db.prepare('SELECT * FROM users WHERE id = ?').get(user.id));
   });
 
-  app.post('/api/auth/logout', { preHandler: auth }, async (req, reply) => {
+  app.post('/api/auth/logout', { preValidation: auth }, async (req, reply) => {
     revokeSession(db, req.auth.idHash);
     reply.clearCookie(SESSION_COOKIE, { path: '/' });
     return { ok: true };
   });
 
-  app.post('/api/auth/logout-all', { preHandler: auth }, async (req, reply) => {
+  app.post('/api/auth/logout-all', { preValidation: auth }, async (req, reply) => {
     revokeUserSessions(db, req.auth.user.id);
     reply.clearCookie(SESSION_COOKIE, { path: '/' });
     return { ok: true };
   });
 
-  app.get('/api/me/sessions', { preHandler: auth }, async (req) => {
+  app.get('/api/me/sessions', { preValidation: auth }, async (req) => {
     const rows = db.prepare('SELECT id_hash, created_at, expires_at, user_agent FROM sessions WHERE user_id = ? ORDER BY created_at DESC').all(req.auth.user.id);
     return { sessions: rows.map((r) => ({ current: r.id_hash === req.auth.idHash, createdAt: r.created_at, expiresAt: r.expires_at, userAgent: r.user_agent })) };
   });
 
-  app.get('/api/me/export', { preHandler: auth }, async (req, reply) => {
+  app.get('/api/me/export', { preValidation: auth }, async (req, reply) => {
     const { user } = req.auth;
     const decks = db.prepare('SELECT * FROM decks WHERE user_id = ? ORDER BY updated_at DESC').all(user.id).map(deckView);
     reply.header('Content-Disposition', 'attachment; filename="mop-meus-dados.json"');
@@ -98,7 +98,7 @@ export function registerAccountRoutes(app, { db, config }) {
   });
 
   app.delete('/api/me', {
-    preHandler: auth,
+    preValidation: auth,
     schema: { body: { type: 'object', required: ['confirm'], properties: { confirm: { type: 'string', maxLength: 64 } } } },
   }, async (req, reply) => {
     const { user } = req.auth;
@@ -117,12 +117,12 @@ export function registerAccountRoutes(app, { db, config }) {
 
   // ------------------------------------------------------------------ decks
 
-  app.get('/api/me/decks', { preHandler: auth }, async (req) => {
+  app.get('/api/me/decks', { preValidation: auth }, async (req) => {
     const rows = db.prepare('SELECT * FROM decks WHERE user_id = ? ORDER BY updated_at DESC').all(req.auth.user.id);
     return { decks: rows.map(deckView) };
   });
 
-  app.put('/api/me/decks/:id', { preHandler: auth }, async (req, reply) => {
+  app.put('/api/me/decks/:id', { preValidation: auth }, async (req, reply) => {
     const { deck, error } = parseDeck(req.body, req.params.id);
     if (error) return reply.code(400).send(apiError(error));
     const userId = req.auth.user.id;
@@ -139,14 +139,14 @@ export function registerAccountRoutes(app, { db, config }) {
     return deckView(db.prepare('SELECT * FROM decks WHERE user_id = ? AND id = ?').get(userId, deck.id));
   });
 
-  app.delete('/api/me/decks/:id', { preHandler: auth }, async (req) => {
+  app.delete('/api/me/decks/:id', { preValidation: auth }, async (req) => {
     db.prepare('DELETE FROM decks WHERE user_id = ? AND id = ?').run(req.auth.user.id, String(req.params.id));
     return { ok: true };
   });
 
   /** First login: decks kept in this browser's localStorage are copied to the account (RF-1.11). */
   app.post('/api/me/decks/import', {
-    preHandler: auth,
+    preValidation: auth,
     schema: { body: { type: 'object', required: ['decks'], properties: { decks: { type: 'array', maxItems: MAX_DECKS } } } },
   }, async (req, reply) => {
     const userId = req.auth.user.id;

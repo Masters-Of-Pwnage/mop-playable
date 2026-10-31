@@ -74,6 +74,9 @@ export function loadConfig(overrides = {}) {
     dbFile: process.env.DB_FILE || path.join(dataDir, 'mop.sqlite'),
     // Public address of the site (OAuth redirect URI, Origin check of API mutations).
     publicUrl: (process.env.PUBLIC_URL || '').replace(/\/+$/, ''),
+    // Built card list (default: STATIC_DIR/cards.json, then public/cards.json) and starter decks.
+    cardsFile: process.env.CARDS_FILE || '',
+    starterDecksFile: process.env.STARTER_DECKS_FILE || path.resolve(here, '../../src/data/starter-decks.json'),
     features: new Set(list('FEATURES').filter((f) => FEATURES.includes(f))),
     googleClientId: process.env.GOOGLE_CLIENT_ID || '',
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',

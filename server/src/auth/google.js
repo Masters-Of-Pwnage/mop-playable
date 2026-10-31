@@ -2,6 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { createSession, isActive, readSession, revokeSession, SESSION_COOKIE, sessionCookieOptions } from './session.js';
 import { upsertGoogleUser } from './users.js';
+import { grantSignup } from '../economy/grants.js';
 
 const OAUTH_COOKIE = 'mop_oauth';
 const OAUTH_COOKIE_PATH = '/api/auth/google';
@@ -21,7 +22,7 @@ export function safeReturnTo(value) {
  *   GET /api/auth/google/start?return_to=#/decks
  *   GET /api/auth/google/callback
  */
-export function registerGoogleAuth(app, { db, config }) {
+export function registerGoogleAuth(app, { db, config, starter = [] }) {
   const { oidc } = config;
   const jwks = createRemoteJWKSet(new URL(oidc.jwksUrl), { cooldownDuration: 30_000, timeoutDuration: 5_000 });
   const redirectUri = () => `${config.publicUrl}${OAUTH_COOKIE_PATH}/callback`;
@@ -107,7 +108,7 @@ export function registerGoogleAuth(app, { db, config }) {
     if (claims.azp !== undefined && claims.azp !== config.googleClientId) return fail('azp não confere');
     if (typeof claims.sub !== 'string' || !claims.sub || claims.sub.length > 255) return fail('sub inválido');
 
-    const { user } = upsertGoogleUser(db, claims, config, req.clientIp);
+    const { user } = upsertGoogleUser(db, claims, config, req.clientIp, (created) => grantSignup(db, created, starter));
     if (!isActive(user)) return fail(`conta ${user.status}`, '#/?login=suspensa');
 
     // A new login always gets a new session id (no fixation through an old cookie).

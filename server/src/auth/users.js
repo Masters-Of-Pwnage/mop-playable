@@ -18,9 +18,10 @@ export function audit(db, { actor = null, action, target = null, before = null, 
 
 /**
  * Finds or creates the account of a verified Google ID token (identified by `sub`, never by e-mail).
- * Verified e-mails listed in OWNER_EMAILS get the owner role. Returns { user, created }.
+ * Verified e-mails listed in OWNER_EMAILS get the owner role. `onSignup(user)` runs inside the same
+ * transaction for new accounts (starter grant). Returns { user, created }.
  */
-export function upsertGoogleUser(db, claims, config, ip = null) {
+export function upsertGoogleUser(db, claims, config, ip = null, onSignup = null) {
   const verified = claims.email_verified === true && typeof claims.email === 'string';
   const email = verified ? claims.email.toLowerCase() : null;
   const avatar = typeof claims.picture === 'string' && claims.picture.startsWith('https://') ? claims.picture.slice(0, 500) : null;
@@ -40,6 +41,7 @@ export function upsertGoogleUser(db, claims, config, ip = null) {
       user = db.prepare('SELECT * FROM users WHERE google_sub = ?').get(claims.sub);
       created = true;
       audit(db, { actor: user.id, action: 'user.signup', target: `user:${user.id}`, after: { role: user.role }, ip });
+      if (onSignup) onSignup(user); // same transaction: no account without its starter kit
     } else {
       db.prepare('UPDATE users SET email = COALESCE(?, email), avatar_url = COALESCE(?, avatar_url), last_login_at = ? WHERE id = ?')
         .run(email, avatar, now, user.id);
