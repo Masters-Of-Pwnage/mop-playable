@@ -9,6 +9,9 @@ const ENABLED = import.meta.env.VITE_ACCOUNTS !== '0';
 
 const state = reactive({ enabled: false, loaded: false, user: null, features: [] });
 let csrfToken = '';
+let markReady;
+/** Resolves once the first loadAccount() finished (route guards wait for it). */
+export const accountReady = new Promise((resolve) => { markReady = resolve; });
 
 export class ApiError extends Error {
   constructor(status, code, message) {
@@ -18,19 +21,26 @@ export class ApiError extends Error {
   }
 }
 
-/** JSON request to /api. Mutations carry the CSRF token and an idempotency key. */
-export async function api(method, path, body) {
-  const headers = { Accept: 'application/json' };
+/**
+ * JSON request to /api. Mutations carry the CSRF token and an idempotency key.
+ * opts.headers adds headers (e.g. If-Match); opts.text returns the body as text (CSV export);
+ * opts.cache is passed to fetch (the public catalog is cacheable for 60 s).
+ */
+export async function api(method, path, body, opts = {}) {
+  const headers = { Accept: 'application/json', ...(opts.headers || {}) };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (method !== 'GET') {
     headers['X-CSRF-Token'] = csrfToken;
     headers['Idempotency-Key'] = crypto.randomUUID();
   }
-  const res = await fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), credentials: 'same-origin' });
+  const res = await fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), credentials: 'same-origin', cache: opts.cache || 'default' });
+  if (opts.text && res.ok) return res.text();
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 401 && state.user) state.user = null; // session expired or revoked elsewhere
-    throw new ApiError(res.status, data.error || `http_${res.status}`, data.message);
+    const err = new ApiError(res.status, data.error || `http_${res.status}`, data.message);
+    err.data = data;
+    throw err;
   }
   return data;
 }
@@ -38,6 +48,7 @@ export async function api(method, path, body) {
 export async function loadAccount() {
   if (!ENABLED) {
     state.loaded = true;
+    markReady();
     return;
   }
   try {
@@ -49,6 +60,7 @@ export async function loadAccount() {
     state.enabled = false; // static hosting without the API
   } finally {
     state.loaded = true;
+    markReady();
   }
 }
 
@@ -66,9 +78,9 @@ export async function refreshMe() {
 }
 
 /** Leaves the SPA for Google; the server brings the player back to the same route. */
-export function login() {
+export function login({ stepUp = false } = {}) {
   const returnTo = window.location.hash || '#/';
-  window.location.assign(`/api/auth/google/start?return_to=${encodeURIComponent(returnTo)}`);
+  window.location.assign(`/api/auth/google/start?return_to=${encodeURIComponent(returnTo)}${stepUp ? '&step_up=1' : ''}`);
 }
 
 export async function logout(all = false) {

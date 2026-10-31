@@ -76,7 +76,7 @@ import { sfx, playMusic, stopMusic, applyVolumes } from './stores/audio.js';
 import { toast, toasts } from './composables/toast.js';
 import UiModal from './components/UiModal.vue';
 import GoogleIcon from './components/GoogleIcon.vue';
-import { account, login } from './stores/account.js';
+import { account, isStaff, login } from './stores/account.js';
 import { importLocalDecks, localDeckCount } from './stores/decks.js';
 import { claimDaily, economy, loadMine } from './stores/economy.js';
 
@@ -89,6 +89,7 @@ const items = computed(() => [
   { to: '/play', label: 'Jogar online' },
   ...(account.enabled ? [{ to: '/loja', label: 'Loja' }, { to: '/colecao', label: 'Coleção' }] : []),
   { to: '/rules', label: 'Como jogar' },
+  ...(account.user && isStaff() ? [{ to: '/admin', label: 'Admin' }] : []),
 ]);
 const isActive = (to) => route.path.startsWith(to);
 const toastClass = (k) => ({ ok: 'border-neon', warn: 'border-amber', error: 'border-danger', info: 'border-cyan' }[k] || 'border-cyan');

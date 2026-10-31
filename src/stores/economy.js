@@ -23,7 +23,8 @@ const state = reactive({
 
 export async function loadCatalog() {
   if (!account.enabled) return;
-  const data = await api('GET', '/catalog');
+  // Revalidate: after a purchase or an admin edit the 60 s browser cache would show old prices.
+  const data = await api('GET', '/catalog', undefined, { cache: 'no-cache' });
   state.shopOpen = data.shopOpen;
   state.rarities = data.rarities;
   state.catalog = Object.fromEntries(data.cards.map((c) => [c.uid, c]));
