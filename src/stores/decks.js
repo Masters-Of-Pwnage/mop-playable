@@ -6,6 +6,8 @@
 import { reactive, watch } from 'vue';
 import { Kind } from '../engine/cards.js';
 import { getCard } from './cards.js';
+import { account, api } from './account.js';
+import { toast } from '../composables/toast.js';
 import starterDecks from '../data/starter-decks.json';
 
 export const MAX_CARDS = 60;
@@ -140,7 +142,8 @@ export function importJson(text) {
 
 // ---------------------------------------------------------------- persistence
 
-const state = reactive({ mine: [] });
+// mode 'local': decks live in this browser (guest). mode 'account': they live on the server.
+const state = reactive({ mine: [], mode: 'local' });
 
 function load() {
   try {
@@ -152,6 +155,7 @@ function load() {
 }
 
 function persist() {
+  if (state.mode !== 'local') return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.mine.map(toExport)));
   } catch (err) {
@@ -165,6 +169,58 @@ export function initDecks() {
   loaded = true;
   load();
   watch(() => state.mine, persist, { deep: true });
+  if (account.user) useAccountDecks();
+}
+
+/** Switches to the decks saved in the account (after login). */
+export async function useAccountDecks() {
+  try {
+    const { decks } = await api('GET', '/me/decks');
+    state.mode = 'account';
+    state.mine = decks.map((d) => normalize(d));
+  } catch (err) {
+    toast(`Não foi possível carregar seus decks da conta (${err.message}).`, 'error');
+  }
+}
+
+/** Back to the decks of this browser (after logout). */
+export function useLocalDecks() {
+  state.mode = 'local';
+  state.mine = [];
+  load();
+}
+
+/** Decks kept in this browser, for the "import into your account" offer. */
+export function localDeckCount() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    return Array.isArray(raw) ? raw.length : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function importLocalDecks() {
+  const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  const decks = raw.map((d) => normalize(d)).filter((d) => d.cards.length)
+    .map((d) => ({ id: d.id, name: d.name.trim() || 'Deck sem nome', cards: d.cards.map(({ uid, amount }) => ({ uid, amount })) }));
+  const result = await api('POST', '/me/decks/import', { decks });
+  await useAccountDecks();
+  return result;
+}
+
+const remoteBody = (deck) => ({ name: deck.name, cards: deck.cards.map(({ uid, amount }) => ({ uid, amount })) });
+
+function syncSave(deck) {
+  if (state.mode !== 'account') return;
+  api('PUT', `/me/decks/${encodeURIComponent(deck.id)}`, remoteBody(deck))
+    .catch((err) => toast(`O deck não foi salvo na conta: ${err.message}`, 'error', 5000));
+}
+
+function syncDelete(id) {
+  if (state.mode !== 'account') return;
+  api('DELETE', `/me/decks/${encodeURIComponent(id)}`)
+    .catch((err) => toast(`O deck não foi apagado da conta: ${err.message}`, 'error', 5000));
 }
 
 export function builtinDecks() {
@@ -189,12 +245,14 @@ export function saveDeck(deck) {
   else state.mine[i] = copy;
   deck.id = copy.id;
   deck.builtin = false;
+  syncSave(copy);
   return '';
 }
 
 export function deleteDeck(id) {
   const i = state.mine.findIndex((d) => d.id === id);
   if (i !== -1) state.mine.splice(i, 1);
+  syncDelete(id);
 }
 
 export const decksStore = state;

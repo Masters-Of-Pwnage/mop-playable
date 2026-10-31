@@ -10,6 +10,8 @@ export const router = createRouter({
     { path: '/play/:code', name: 'room', component: () => import('./views/LobbyView.vue'), props: true },
     { path: '/game', name: 'game', component: () => import('./views/GameView.vue') },
     { path: '/rules', name: 'rules', component: () => import('./views/RulesView.vue') },
+    { path: '/perfil', name: 'profile', component: () => import('./views/ProfileView.vue') },
+    { path: '/privacidade', name: 'privacy', component: () => import('./views/PrivacyView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior: () => ({ top: 0 }),

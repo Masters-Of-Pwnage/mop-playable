@@ -11,6 +11,10 @@ export default defineConfig({
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   base: process.env.BASE_PATH ?? '/mop-playable/',
+  // Dev: the API and the login callback live on the game server (npm run server, port 8787).
+  server: {
+    proxy: { '/api': 'http://localhost:8787' },
+  },
   build: {
     target: 'es2020',
     chunkSizeWarningLimit: 900,

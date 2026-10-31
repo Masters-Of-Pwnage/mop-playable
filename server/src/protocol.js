@@ -46,4 +46,12 @@ export const ERRORS = {
   version: 'Versão do jogo incompatível com o servidor. Atualize o jogo.',
   not_found: 'Recurso não encontrado.',
   internal: 'Erro interno. Tente novamente.',
+  unauthenticated: 'Entre com sua conta para continuar.',
+  forbidden: 'Você não tem permissão para isso.',
+  bad_origin: 'Origem da requisição não permitida.',
+  bad_csrf: 'Sessão inválida para esta ação. Recarregue a página.',
+  accounts_disabled: 'Contas não estão habilitadas neste servidor.',
+  too_many_decks: 'Limite de decks da conta atingido.',
+  deck_invalid: 'Deck inválido.',
+  confirm_mismatch: 'A confirmação não confere.',
 };

@@ -39,6 +39,8 @@ export function loadConfig(overrides = {}) {
     crossOriginIsolation: process.env.CROSS_ORIGIN_ISOLATION === '1',
     maxClients: int('MAX_CLIENTS', 1000),
     maxClientsPerIp: int('MAX_CLIENTS_PER_IP', 20),
+    // Lobby sockets one account may keep open (tabs/devices).
+    maxClientsPerAccount: int('MAX_CLIENTS_PER_ACCOUNT', 3),
     maxRooms: int('MAX_ROOMS', 500),
     // Rooms one client address may host at once (a room outlives its host for RECONNECT_GRACE_SECONDS).
     maxRoomsPerIp: int('MAX_ROOMS_PER_IP', 5),
@@ -76,6 +78,15 @@ export function loadConfig(overrides = {}) {
     googleClientId: process.env.GOOGLE_CLIENT_ID || '',
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     sessionSecret: process.env.SESSION_SECRET || '',
+    // Google OpenID Connect endpoints (overridden by the tests with a local fake provider).
+    oidc: {
+      authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+      tokenUrl: 'https://oauth2.googleapis.com/token',
+      jwksUrl: 'https://www.googleapis.com/oauth2/v3/certs',
+      issuers: ['https://accounts.google.com', 'accounts.google.com'],
+    },
+    // Path of the site under PUBLIC_URL; the login callback redirects to SITE_BASE + "#/...".
+    siteBase: process.env.SITE_BASE || '/',
     // Verified Google e-mails that get the owner role on login.
     ownerEmails: list('OWNER_EMAILS').map((e) => e.toLowerCase()),
     // JSON body limit of /api requests.

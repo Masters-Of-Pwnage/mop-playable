@@ -15,6 +15,17 @@
           <span aria-hidden="true">{{ settings.music > 0 ? '♫' : '♪' }}</span>
           <span class="hidden md:inline">{{ settings.music > 0 ? 'Música' : 'Sem música' }}</span>
         </button>
+        <template v-if="account.enabled">
+          <RouterLink v-if="account.user" to="/perfil" class="btn btn-ghost btn-sm max-w-[42vw]" :title="`Perfil de ${account.user.displayName}`" @click="sfx('click')">
+            <img v-if="account.user.avatarUrl" :src="account.user.avatarUrl" alt="" class="h-6 w-6 rounded-full" referrerpolicy="no-referrer" />
+            <span v-else class="grid h-6 w-6 place-items-center rounded-full border border-neon/60 font-mono text-xs text-neon">{{ initial }}</span>
+            <span class="truncate">{{ account.user.displayName }}</span>
+          </RouterLink>
+          <button v-else class="btn btn-sm google-btn" @click="login">
+            <GoogleIcon class="h-4 w-4" />
+            <span>Entrar com o Google</span>
+          </button>
+        </template>
         <button class="btn btn-ghost btn-sm sm:hidden" aria-label="Menu" @click="menuOpen = !menuOpen">☰</button>
       </nav>
       <Transition name="fade">
@@ -34,6 +45,14 @@
       </RouterView>
     </main>
 
+    <UiModal :open="importOffer > 0" title="Importar decks deste navegador?" @close="declineImport">
+      <p class="muted">Encontramos {{ importOffer }} deck(s) salvos neste navegador. Quer copiá-los para a sua conta? Eles ficam disponíveis em qualquer dispositivo.</p>
+      <div class="mt-5 flex justify-end gap-2">
+        <button class="btn" @click="declineImport">Agora não</button>
+        <button class="btn btn-primary" :disabled="importing" @click="acceptImport">Importar</button>
+      </div>
+    </UiModal>
+
     <!-- toasts -->
     <div class="pointer-events-none fixed left-1/2 top-16 z-[70] flex w-[min(92vw,420px)] -translate-x-1/2 flex-col gap-2">
       <TransitionGroup name="pop">
@@ -47,13 +66,18 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import logo from './assets/art/logo.webp';
 import { settings } from './stores/settings.js';
 import { sfx, playMusic, stopMusic, applyVolumes } from './stores/audio.js';
-import { toasts } from './composables/toast.js';
+import { toast, toasts } from './composables/toast.js';
+import UiModal from './components/UiModal.vue';
+import GoogleIcon from './components/GoogleIcon.vue';
+import { account, login } from './stores/account.js';
+import { importLocalDecks, localDeckCount } from './stores/decks.js';
 
 const route = useRoute();
+const router = useRouter();
 const menuOpen = ref(false);
 const isGame = computed(() => route.name === 'game');
 const items = [
@@ -82,4 +106,63 @@ const musicFor = (name) => ({ decks: 'deck', game: 'game' }[name] || 'menu');
 watch(() => route.name, (name) => {
   if (settings.music > 0 && name !== 'game') playMusic(musicFor(name));
 }, { immediate: true });
+
+const initial = computed(() => (account.user?.displayName || '?').slice(0, 1).toUpperCase());
+
+// The login callback lands on "#/...?login=<result>" when something went wrong.
+const LOGIN_RESULTS = {
+  erro: ['Não foi possível entrar com o Google. Tente de novo.', 'error'],
+  cancelado: ['Login cancelado.', 'info'],
+  suspensa: ['Esta conta está suspensa. Fale com a organização do jogo.', 'error'],
+};
+watch(() => route.query.login, (value) => {
+  if (!value) return;
+  const [text, kind] = LOGIN_RESULTS[value] || LOGIN_RESULTS.erro;
+  toast(text, kind, 5000);
+  const { login: _login, ...query } = route.query;
+  router.replace({ query });
+}, { immediate: true });
+
+// After the first login on this browser: offer to copy the local decks into the account (RF-1.11).
+const importOffer = ref(0);
+const importing = ref(false);
+const offerKey = () => `mop.decks.import-offered.${account.user?.publicId}`;
+watch(() => account.user?.publicId, (id) => {
+  if (!id) return;
+  try {
+    if (localStorage.getItem(offerKey())) return;
+  } catch {
+    return;
+  }
+  importOffer.value = localDeckCount();
+}, { immediate: true });
+
+function markOffered() {
+  try {
+    localStorage.setItem(offerKey(), String(Date.now()));
+  } catch { /* ignore */ }
+  importOffer.value = 0;
+}
+
+function declineImport() {
+  markOffered();
+}
+
+async function acceptImport() {
+  importing.value = true;
+  try {
+    const { imported } = await importLocalDecks();
+    toast(`${imported} deck(s) importados para a sua conta.`, 'ok');
+    markOffered();
+  } catch (err) {
+    toast(`Não foi possível importar: ${err.message}`, 'error');
+  } finally {
+    importing.value = false;
+  }
+}
 </script>
+
+<style scoped>
+.google-btn { background: #fff; color: #1f1f1f; border-color: #dadce0; font-family: Roboto, Arial, sans-serif; font-weight: 500; }
+.google-btn:hover:not(:disabled) { background: #f8f9fa; border-color: #c6c9cc; box-shadow: none; }
+</style>

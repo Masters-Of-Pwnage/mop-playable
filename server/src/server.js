@@ -1,11 +1,16 @@
 import { randomBytes } from 'node:crypto';
 import net from 'node:net';
+import fastifyCookie from '@fastify/cookie';
 import Fastify from 'fastify';
 import { WebSocketServer } from 'ws';
 import { loadConfig } from './config.js';
+import { registerAccountRoutes } from './api/me.js';
+import { registerGoogleAuth } from './auth/google.js';
+import { purgeExpiredSessions, readSession, SESSION_COOKIE } from './auth/session.js';
 import { migrate, openDb } from './db.js';
 import { Bucket, KeyedLimiter } from './ratelimit.js';
 import { RoomManager } from './rooms.js';
+import { apiError } from './errors.js';
 import { serveStatic } from './static.js';
 import { cleanText, normalizeCode, parseMessage, ERRORS, PROTOCOL_VERSION, MAX_NAME, MAX_ROOM_NAME } from './protocol.js';
 
@@ -28,11 +33,14 @@ function safeUrl(raw) {
  */
 export function createServer(overrides = {}) {
   const config = loadConfig(overrides);
+  const accounts = config.features.has('accounts');
+  if (accounts) checkAccountsConfig(config);
   const db = openDb(config.dbFile);
   migrate(db);
   const rooms = new RoomManager(config);
   const ipConnections = new Map();
   const joinFailures = new Map(); // ip -> { count, resetAt }
+  const accountConnections = new Map(); // user id -> open sockets
   const apiLimiter = new KeyedLimiter(config.apiRateLimitPerSecond, config.apiRateLimitBurst);
 
   const app = Fastify({
@@ -43,6 +51,14 @@ export function createServer(overrides = {}) {
     return503OnClosing: true,
   });
   app.decorate('mop', { config, db, rooms });
+  // Signs the short-lived OAuth state cookie. Without accounts nothing is signed: any secret will do.
+  app.register(fastifyCookie, { secret: config.sessionSecret || randomBytes(32).toString('hex') });
+  app.register(async (api) => {
+    api.get('/api/features', async () => ({ features: [...config.features] }));
+    if (!accounts) return;
+    registerGoogleAuth(api, { db, config });
+    registerAccountRoutes(api, { db, config });
+  });
 
   app.addHook('onRequest', async (req, reply) => {
     // A request target such as "//" must get a 400, not reach the router or the static handler.
@@ -120,11 +136,15 @@ export function createServer(overrides = {}) {
     if (wss.clients.size >= config.maxClients) return reject(503, 'Service Unavailable');
     const ip = clientIp(req);
     if ((ipConnections.get(ip) || 0) >= config.maxClientsPerIp) return reject(429, 'Too Many Requests');
-    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req, ip));
+    // Same-origin page with a session cookie: the lobby session is tied to the account.
+    const account = accounts ? readSession(db, app.parseCookie(req.headers.cookie || '')[SESSION_COOKIE])?.user || null : null;
+    if (account && (accountConnections.get(account.id) || 0) >= config.maxClientsPerAccount) return reject(429, 'Too Many Requests');
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req, ip, account));
   });
 
-  wss.on('connection', (ws, _req, ip) => {
+  wss.on('connection', (ws, _req, ip, account) => {
     ipConnections.set(ip, (ipConnections.get(ip) || 0) + 1);
+    if (account) accountConnections.set(account.id, (accountConnections.get(account.id) || 0) + 1);
     const bucket = new Bucket(config.rateLimitPerSecond, config.rateLimitBurst);
     const byteBucket = new Bucket(config.rateLimitBytesPerSecond, config.rateLimitBurstBytes);
     // ws re-emits frame errors (oversize, bad UTF-8, bad opcode, too many fragments) here and already
@@ -187,6 +207,11 @@ export function createServer(overrides = {}) {
       const left = (ipConnections.get(ip) || 1) - 1;
       if (left <= 0) ipConnections.delete(ip);
       else ipConnections.set(ip, left);
+      if (account) {
+        const open = (accountConnections.get(account.id) || 1) - 1;
+        if (open <= 0) accountConnections.delete(account.id);
+        else accountConnections.set(account.id, open);
+      }
       if (session && session.transport === send) rooms.disconnect(session);
     });
 
@@ -196,8 +221,13 @@ export function createServer(overrides = {}) {
           fail('version');
           return;
         }
-        session = rooms.createSession({ name: cleanText(msg.name, MAX_NAME) || 'Hacker', ip, transport: send });
-        send({ type: 'welcome', id: session.id, token: session.token, protocol: PROTOCOL_VERSION });
+        // Logged-in players always show their account name; the name sent by the client is ignored.
+        const name = account ? account.display_name : cleanText(msg.name, MAX_NAME) || 'Hacker';
+        session = rooms.createSession({ name, ip, transport: send });
+        session.userId = account ? account.id : null;
+        const welcome = { type: 'welcome', id: session.id, token: session.token, protocol: PROTOCOL_VERSION };
+        if (account) welcome.account = { publicId: account.public_id, displayName: account.display_name };
+        send(welcome);
         return;
       }
       if (msg.type === 'resume') {
@@ -242,6 +272,7 @@ export function createServer(overrides = {}) {
           send({ type: 'pong' });
           break;
         case 'rename': {
+          if (session.userId) break; // account names change through PATCH /api/me
           const name = cleanText(msg.name, MAX_NAME) || session.name;
           const other = session.room?.seats.find((s) => s !== null && s !== session);
           session.name = other && other.name.toLowerCase() === name.toLowerCase() ? `${name.slice(0, MAX_NAME - 4)} (2)` : name;
@@ -315,6 +346,7 @@ export function createServer(overrides = {}) {
     const now = Date.now();
     for (const [ip, entry] of joinFailures) if (entry.resetAt <= now) joinFailures.delete(ip);
     apiLimiter.sweep();
+    purgeExpiredSessions(db);
   }, 60_000);
   joinSweep.unref?.();
 
@@ -340,9 +372,14 @@ export function createServer(overrides = {}) {
   };
 }
 
-/** API error body: { error: code, message: text in pt-BR } (docs/sdd/00-arquitetura.md §5). */
-export function apiError(code, message) {
-  return { error: code, message: message || ERRORS[code] || code };
+/** Accounts cannot start half configured: a missing secret would only show up at the first login. */
+function checkAccountsConfig(config) {
+  const missing = [];
+  if (!/^https?:\/\//.test(config.publicUrl)) missing.push('PUBLIC_URL');
+  if (!config.googleClientId) missing.push('GOOGLE_CLIENT_ID');
+  if (!config.googleClientSecret) missing.push('GOOGLE_CLIENT_SECRET');
+  if (config.sessionSecret.length < 32) missing.push('SESSION_SECRET (32+ caracteres)');
+  if (missing.length) throw new Error(`FEATURES=accounts exige: ${missing.join(', ')}`);
 }
 
 function dbAlive(db) {

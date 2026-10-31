@@ -36,6 +36,8 @@ jobs:
         run: npm run build
         env:
           VITE_SERVER_URL: ${{ vars.LOBBY_SERVER_URL }}
+          # Pages is another origin than the lobby server: no session cookie, so guest mode only.
+          VITE_ACCOUNTS: "0"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
