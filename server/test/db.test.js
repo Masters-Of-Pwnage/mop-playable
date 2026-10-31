@@ -112,3 +112,15 @@ test('N-14 database and backups are private to the server user (0600 files, 0700
   db.close();
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('NV-7 invariants catch a collection row that disappeared', async () => {
+  const { checkInvariants, MINT, post, userOwner } = await import('../src/economy/ledger.js');
+  const db = freshDb();
+  db.prepare("INSERT INTO card_catalog (uid, name, kind, rarity, availability, tradeable, animation_consent, updated_at) VALUES ('c1', 'C', 'creature', 'comum', 'loja', 1, 'pendente', 1)").run();
+  db.prepare("INSERT INTO users (public_id, display_name, created_at) VALUES ('p1', 'A', 1)").run();
+  post(db, { kind: 'admin_adjust', key: 'k', entries: [{ owner: MINT, currency: 'CR', amount: -1 }, { owner: userOwner(1), currency: 'CR', amount: 1 }], cards: [{ userId: 1, uid: 'c1', delta: 2 }] });
+  assert.deepEqual(checkInvariants(db), []);
+  db.prepare('DELETE FROM user_cards').run();
+  assert.ok(checkInvariants(db).some((p) => p.startsWith('I3c')));
+  db.close();
+});

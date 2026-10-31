@@ -499,3 +499,15 @@ test('N-15 LGPD export: wallet, ledger, collection, trades, matches, sessions wi
   assert.equal(r.body.trades[0].otherPlayer, vet.user.public_id);
   assert.deepEqual(Object.keys(r.body.trades[0]).sort(), ['createdAt', 'direction', 'id', 'offer', 'otherPlayer', 'request', 'status']);
 });
+
+test('NV-2 export: no staff IP or internal reason; the holder\'s own IP stays', async () => {
+  const p = account();
+  const admin = account('admin');
+  db.prepare("INSERT INTO audit_log (actor_user_id, action, target, ip, created_at) VALUES (?, 'user.suspend', ?, '198.51.100.77', ?)").run(admin.user.id, `user:${p.user.id}`, Date.now());
+  db.prepare("INSERT INTO audit_log (actor_user_id, action, target, ip, created_at) VALUES (?, 'user.signup', ?, '203.0.113.5', ?)").run(p.user.id, `user:${p.user.id}`, Date.now());
+  post(db, { kind: 'admin_adjust', key: `nv2-${p.user.id}`, reason: 'suspeita de multicontas (caso 42)', entries: [{ owner: MINT, currency: 'CR', amount: -5 }, { owner: userOwner(p.user.id), currency: 'CR', amount: 5 }] });
+  const body = JSON.stringify((await p.call('GET', '/api/me/export')).body);
+  assert.ok(!body.includes('198.51.100.77'));
+  assert.ok(!body.includes('caso 42'));
+  assert.ok(body.includes('203.0.113.5'));
+});

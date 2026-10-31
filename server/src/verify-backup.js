@@ -1,12 +1,14 @@
 /**
  * Restore drill check (pentest N-14): opens a backup read-only and prints what it holds plus the
- * ledger invariants I1–I5. Exit code 1 when the file is unreadable or an invariant is broken.
+ * ledger invariants I1–I5. Exit code 1 when the file is unreadable, an invariant is broken or the
+ * database has no accounts (a copy of a freshly created database; --permitir-vazio accepts it).
  *   node src/verify-backup.js /data/backups/mop-20261031-000000.sqlite
  */
 import { DatabaseSync } from 'node:sqlite';
 import { checkInvariants } from './economy/ledger.js';
 
-const file = process.argv[2];
+const file = process.argv.slice(2).find((a) => !a.startsWith('--'));
+const allowEmpty = process.argv.includes('--permitir-vazio');
 if (!file) {
   console.error('uso: node src/verify-backup.js <arquivo.sqlite>');
   process.exit(2);
@@ -16,6 +18,7 @@ try {
   const count = (table) => db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n;
   const integrity = db.prepare('PRAGMA integrity_check').get().integrity_check;
   const problems = checkInvariants(db);
+  if (!allowEmpty && count('users') === 0) problems.push('banco sem nenhuma conta: backup de um banco recém-criado?');
   const report = {
     arquivo: file,
     integridade: integrity,

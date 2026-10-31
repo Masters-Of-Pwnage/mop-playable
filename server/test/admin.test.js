@@ -319,7 +319,7 @@ test('N-2 / N-5 ADMIN_ALLOW_CIDRS gates /api/admin by client address; forwarding
     assert.equal(await status(a.url, '198.51.100.7'), 403);
     assert.equal(await status(a.url, '203.0.113.9'), 401); // allowed address: down to the login check
     assert.equal(await status(a.url, '2001:db8::5'), 401);
-    assert.equal((await fetch(`${a.url}//api//admin/health`)).status, 404);
+    assert.equal((await fetch(`${a.url}//api//admin/health`)).status, 400);
     assert.equal((await fetch(`${a.url}/api/features`)).status, 200); // the rest of the API is untouched
   } finally {
     await a.s.close();
@@ -364,5 +364,30 @@ test('Cloudflare Access: /api/admin needs a valid Access JWT (issuer, audience, 
   } finally {
     await s.close();
     certs.close();
+  }
+});
+
+test('NV-1 percent-encoded or absolute-form targets get the same API gates as the plain path', async () => {
+  const s = createServer({
+    dbFile: ':memory:', staticDir: '/nonexistent', features: new Set(['accounts']),
+    publicUrl: 'http://127.0.0.1', googleClientId: 'x', googleClientSecret: 'x', sessionSecret: 'x'.repeat(40),
+    adminAllowCidrs: ['203.0.113.0/24'], apiRateLimitBurst: 3, apiRateLimitPerSecond: 0.001,
+  });
+  const { port } = await s.listen(0, '127.0.0.1');
+  const raw = (target) => new Promise((resolve, reject) => {
+    const req = http.request({ host: '127.0.0.1', port, method: 'GET', path: target }, (res) => { res.resume(); resolve(res); });
+    req.on('error', reject);
+    req.end();
+  });
+  try {
+    const enc = await raw('/%61pi/admin/health');
+    assert.equal(enc.statusCode, 403); // was 401: the encoded form skipped ADMIN_ALLOW_CIDRS
+    assert.match(enc.headers['content-security-policy'], /default-src 'none'/);
+    assert.equal((await raw(`http://127.0.0.1:${port}/api/admin/health`)).statusCode, 400);
+    const statuses = [];
+    for (let i = 0; i < 6; i += 1) statuses.push((await raw('/%61pi/features')).statusCode);
+    assert.ok(statuses.includes(429), statuses.join()); // the rate limit counts the encoded form too
+  } finally {
+    await s.close();
   }
 });

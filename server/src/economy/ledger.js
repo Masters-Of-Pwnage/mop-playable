@@ -113,6 +113,10 @@ export function checkInvariants(db) {
   for (const r of db.prepare(`SELECT c.user_id, c.card_uid FROM user_cards c LEFT JOIN
                               (SELECT user_id, card_uid, SUM(delta) AS s FROM inventory_moves GROUP BY user_id, card_uid) m
                               ON m.user_id = c.user_id AND m.card_uid = c.card_uid WHERE COALESCE(m.s, 0) <> c.quantity`).all()) problems.push(`I3b coleção ${r.user_id} ${r.card_uid}`);
+  // The other direction: cards the moves say someone owns but the collection lost (a missing row).
+  for (const r of db.prepare(`SELECT m.user_id, m.card_uid FROM (SELECT user_id, card_uid, SUM(delta) AS s FROM inventory_moves GROUP BY user_id, card_uid) m
+                              LEFT JOIN user_cards c ON c.user_id = m.user_id AND c.card_uid = m.card_uid
+                              WHERE m.s <> 0 AND c.user_id IS NULL`).all()) problems.push(`I3c coleção sem linha ${r.user_id} ${r.card_uid}`);
   // Selling a card back does not restock it: stock_sold counts shop purchases only.
   for (const r of db.prepare(`SELECT uid FROM (SELECT k.uid, k.stock_sold, (SELECT COALESCE(SUM(m.delta), 0) FROM inventory_moves m
                               JOIN ledger_tx t ON t.id = m.tx_id WHERE m.card_uid = k.uid AND t.kind = 'shop_buy') AS s FROM card_catalog k)

@@ -22,6 +22,8 @@ chmod 700 "$STAGE"
 # The newest copy made by VACUUM INTO (consistent); never the live .sqlite with its WAL.
 docker run --rm --network none -v "$VOLUME":/d:ro -v "$STAGE":/o alpine:3.20 sh -c \
   'f=$(ls -1t /d/backups/mop-*.sqlite 2>/dev/null | head -1); [ -n "$f" ] || { echo "nenhum backup em /data/backups" >&2; exit 1; }
+   # The server backs up every BACKUP_HOURS: over 26 h without a new one is a failure, not an "ok" copy of old data.
+   [ -n "$(find "$f" -mmin -1560)" ] || { echo "backup mais novo ($f) tem mais de 26 h" >&2; exit 1; }
    cp "$f" /o/mop-latest.sqlite && chmod 600 /o/mop-latest.sqlite && basename "$f"'
 
 restic snapshots >/dev/null 2>&1 || restic init

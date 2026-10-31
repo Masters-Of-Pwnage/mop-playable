@@ -105,7 +105,8 @@ export function registerAccountRoutes(app, { db, config }) {
       },
       decks: db.prepare('SELECT * FROM decks WHERE user_id = ? ORDER BY updated_at DESC').all(id).map(deckView),
       wallet: balances(db, id),
-      ledger: all(`SELECT t.id AS tx, t.kind, t.reason, w.currency, e.amount, t.created_at AS createdAt
+      // No `reason`: on staff adjustments it is an internal note about the case (pentest NV-2).
+      ledger: all(`SELECT t.id AS tx, t.kind, w.currency, e.amount, t.created_at AS createdAt
                    FROM ledger_entries e JOIN wallets w ON w.id = e.wallet_id JOIN ledger_tx t ON t.id = e.tx_id
                    WHERE w.owner = ? ORDER BY t.id`, userOwner(id)),
       collection: all('SELECT card_uid AS uid, quantity FROM user_cards WHERE user_id = ? AND quantity > 0 ORDER BY card_uid', id),
@@ -122,9 +123,12 @@ export function registerAccountRoutes(app, { db, config }) {
       packs: all('SELECT product_id AS product, version, cards, pity, created_at AS createdAt FROM pack_openings WHERE user_id = ?', id)
         .map((p) => ({ ...p, cards: json(p.cards) })),
       sessions: all('SELECT created_at AS createdAt, expires_at AS expiresAt, ip, user_agent AS userAgent FROM sessions WHERE user_id = ?', id),
-      // Security log: what was done to the account, and the account's own actions (without other people's data).
-      audit: all(`SELECT action, CASE WHEN target = ? THEN target ELSE NULL END AS target, ip, created_at AS createdAt
-                        FROM audit_log WHERE target = ? OR actor_user_id = ? ORDER BY id`, `user:${id}`, `user:${id}`, id),
+      // Security log: what was done to the account and the account's own actions. The IP only when the
+      // holder did it: a staff member's address is theirs, not the holder's (pentest NV-2).
+      audit: all(`SELECT action, CASE WHEN target = ? THEN target ELSE NULL END AS target,
+                  CASE WHEN actor_user_id = ? THEN ip ELSE NULL END AS ip,
+                  CASE WHEN actor_user_id = ? THEN 'você' ELSE 'equipe do jogo' END AS byWhom, created_at AS createdAt
+                  FROM audit_log WHERE target = ? OR actor_user_id = ? ORDER BY id`, `user:${id}`, id, id, `user:${id}`, id),
     };
   });
 

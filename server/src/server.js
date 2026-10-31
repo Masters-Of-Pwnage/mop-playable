@@ -49,6 +49,18 @@ function inList(list, ip) {
   return net.isIPv6(ip) && list.check(ip, 'ipv6');
 }
 
+/** Decoded path of an origin-form request target ("/a/b?c"), or null for anything else or malformed. */
+function requestPath(raw) {
+  if (typeof raw !== 'string' || !raw.startsWith('/') || raw.startsWith('//')) return null;
+  const url = safeUrl(raw);
+  if (!url) return null;
+  try {
+    return decodeURIComponent(url.pathname);
+  } catch {
+    return null;
+  }
+}
+
 /** URL parsing that never throws: a request target such as "//" makes `new URL(raw, base)` throw. */
 function safeUrl(raw) {
   try {
@@ -91,6 +103,7 @@ export function createServer(overrides = {}) {
   const joinFailures = new Map(); // ip -> { count, resetAt }
   const accountSockets = new Map(); // user id -> Map(ws -> session id hash it was opened with)
   const lobbySockets = new WeakMap(); // lobby session -> the socket attached to it
+  const revokedSockets = new WeakSet(); // closing after a revocation: nothing they send counts any more
   const apiLimiter = new KeyedLimiter(config.apiRateLimitPerSecond, config.apiRateLimitBurst);
   const trustedProxies = cidrList(config.trustedProxies);
   const adminAllow = cidrList(config.adminAllowCidrs);
@@ -132,10 +145,14 @@ export function createServer(overrides = {}) {
   });
 
   app.addHook('onRequest', async (req, reply) => {
-    // A request target such as "//" must get a 400, not reach the router or the static handler.
-    if (!safeUrl(req.raw.url)) return reply.code(400).type('text/plain; charset=utf-8').send('Bad request');
+    // A request target such as "//", or an absolute-form one ("http://host/api/..."), gets a 400:
+    // it must not reach the router or the static handler with a path the checks below don't see.
+    const path = requestPath(req.raw.url);
+    if (path === null) return reply.code(400).headers(securityHeaders(config)).type('text/plain; charset=utf-8').send('Bad request');
     req.clientIp = clientIp(req.raw);
-    if (req.url.startsWith('/api/')) {
+    // Decided on the matched route and on the decoded path, never on the raw URL: "/%61pi/..." is the
+    // same route as "/api/..." for the router, so it gets the same limits and gates (pentest NV-1).
+    if (path.startsWith('/api/') || req.routeOptions.url?.startsWith('/api/')) {
       reply.headers(securityHeaders(config)).header('Cache-Control', 'no-store');
       if (!apiLimiter.take(req.clientIp)) return reply.code(429).send(apiError('rate_limited'));
       // The matched route, not the raw URL: "/api//admin" or "%2F" tricks cannot slip past it.
@@ -155,7 +172,7 @@ export function createServer(overrides = {}) {
   });
 
   app.setNotFoundHandler((req, reply) => {
-    if (req.url.startsWith('/api/')) return reply.code(404).send(apiError('not_found'));
+    if (requestPath(req.raw.url)?.startsWith('/api/')) return reply.code(404).send(apiError('not_found'));
     reply.hijack();
     if (!serveStatic(req.raw, reply.raw, config)) {
       reply.raw.writeHead(404, { ...securityHeaders(config), 'Content-Type': 'text/plain; charset=utf-8' }).end('Not found');
@@ -228,7 +245,14 @@ export function createServer(overrides = {}) {
     if (userId) rooms.dropUser(userId);
     for (const [uid, socks] of accountSockets) {
       if (userId && uid !== userId) continue;
-      for (const [ws, hash] of socks) if (userId || hash === idHash) ws.close(4001, 'account_revoked');
+      for (const [ws, hash] of socks) {
+        if (!userId && hash !== idHash) continue;
+        // A client may ignore the close frame: its messages are dropped now and the socket is cut
+        // shortly after (pentest NV-3).
+        revokedSockets.add(ws);
+        ws.close(4001, 'account_revoked');
+        setTimeout(() => ws.terminate(), 2000).unref?.();
+      }
     }
   };
   sessionEvents.on('revoked', onRevoked);
@@ -276,6 +300,7 @@ export function createServer(overrides = {}) {
     }, config.heartbeatMs);
 
     ws.on('message', (raw, isBinary) => {
+      if (revokedSockets.has(ws)) return;
       if (!bucket.take() || !byteBucket.take(raw.length)) {
         fail('rate_limited');
         return;
