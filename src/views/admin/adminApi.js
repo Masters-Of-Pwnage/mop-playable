@@ -11,6 +11,17 @@ export function showError(err) {
     setTimeout(() => login({ stepUp: true }), 1500);
     return;
   }
+  if (err?.code === 'access_required') {
+    // One trip to the Access login per minute: if it keeps failing, say so instead of looping.
+    let last = 0;
+    try { last = Number(sessionStorage.getItem('mop_access_redirect')) || 0; } catch { /* storage off */ }
+    if (Date.now() - last > 60_000) {
+      try { sessionStorage.setItem('mop_access_redirect', String(Date.now())); } catch { /* storage off */ }
+      toast('Abrindo o login do Cloudflare Access para o painel de administração…', 'warn', 4000);
+      setTimeout(() => window.location.assign('/api/admin/access'), 1500);
+      return;
+    }
+  }
   const extra = err?.data?.field ? ` (campo: ${err.data.field})` : err?.data?.uid ? ` (carta: ${err.data.uid})` : '';
   toast(`${err?.message || 'Erro'}${extra}`, 'error', 5000);
 }

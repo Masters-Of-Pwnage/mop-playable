@@ -1,7 +1,9 @@
 // Admin API (docs/sdd/04-admin.md §10).
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import http from 'node:http';
 import path from 'node:path';
+import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
 import { createServer } from '../src/server.js';
@@ -327,5 +329,40 @@ test('N-2 / N-5 ADMIN_ALLOW_CIDRS gates /api/admin by client address; forwarding
     assert.equal(await status(b.url, '203.0.113.9'), 403); // header from an unknown peer is ignored
   } finally {
     await b.s.close();
+  }
+});
+
+test('Cloudflare Access: /api/admin needs a valid Access JWT (issuer, audience, signature)', async () => {
+  const keys = await generateKeyPair('RS256');
+  const other = await generateKeyPair('RS256');
+  const jwk = { ...(await exportJWK(keys.publicKey)), kid: 'cf1', alg: 'RS256', use: 'sig' };
+  const certs = http.createServer((_req, res) => res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ keys: [jwk] })));
+  await new Promise((r) => certs.listen(0, '127.0.0.1', r));
+  const team = 'https://team.example';
+  const s = createServer({
+    dbFile: ':memory:', staticDir: '/nonexistent', features: new Set(['accounts']),
+    publicUrl: 'http://127.0.0.1', googleClientId: 'x', googleClientSecret: 'x', sessionSecret: 'x'.repeat(40),
+    cfAccess: { teamDomain: team, aud: 'AUD1', certsUrl: `http://127.0.0.1:${certs.address().port}/certs` },
+  });
+  const { port } = await s.listen(0, '127.0.0.1');
+  const jwt = (claims, key = keys) => new SignJWT({ email: 'dono@example.com', ...claims })
+    .setProtectedHeader({ alg: 'RS256', kid: 'cf1' }).setIssuedAt().setExpirationTime('5m').sign(key.privateKey);
+  const get = (url, token) => fetch(`http://127.0.0.1:${port}${url}`, { redirect: 'manual', headers: token ? { 'Cf-Access-Jwt-Assertion': token } : {} });
+  try {
+    const none = await get('/api/admin/health');
+    assert.equal(none.status, 403);
+    assert.equal((await none.json()).error, 'access_required');
+    assert.equal((await get('/api/admin/health', await jwt({ iss: team, aud: 'OTHER' }))).status, 403);
+    assert.equal((await get('/api/admin/health', await jwt({ iss: 'https://evil.example', aud: 'AUD1' }))).status, 403);
+    assert.equal((await get('/api/admin/health', await jwt({ iss: team, aud: 'AUD1' }, other))).status, 403);
+    const ok = await jwt({ iss: team, aud: 'AUD1' });
+    assert.equal((await get('/api/admin/health', ok)).status, 401); // Access passed: down to the game login
+    const entry = await get('/api/admin/access', ok);
+    assert.equal(entry.status, 302);
+    assert.equal(entry.headers.get('location'), '/#/admin');
+    assert.equal((await get('/api/features')).status, 200); // only the admin needs Access
+  } finally {
+    await s.close();
+    certs.close();
   }
 });

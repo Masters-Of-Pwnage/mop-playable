@@ -4,6 +4,8 @@
  *   MOP_URL=https://mop.cle.beer MOP_TOKEN=mop_... node scripts/anim/push.mjs .anim-work/wave1.json [uid...]
  * The token comes from Admin > Sistema > Tokens (scope animations:write). Each clip lands "em revisão"
  * in Admin > Animações; nothing reaches players before an admin approves it.
+ * Behind Cloudflare Access, also set CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET (a service token
+ * allowed by the Access application of /api/admin).
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -26,6 +28,9 @@ const resolve = (p) => {
   const near = path.resolve(path.dirname(manifestPath), p);
   return fs.existsSync(near) ? near : path.resolve(root, p);
 };
+const accessHeaders = process.env.CF_ACCESS_CLIENT_ID
+  ? { 'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID, 'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET || '' }
+  : {};
 let sent = 0;
 for (const item of manifest) {
   if (item.status !== 'aprovada' || (only.length && !only.includes(item.uid))) continue;
@@ -34,7 +39,7 @@ for (const item of manifest) {
   if (item.crop) body.crop = item.crop;
   const res = await fetch(`${base}/api/admin/animations/${encodeURIComponent(item.uid)}`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...accessHeaders },
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));

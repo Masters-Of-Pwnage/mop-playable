@@ -33,7 +33,15 @@ export async function api(method, path, body, opts = {}) {
     headers['X-CSRF-Token'] = csrfToken;
     headers['Idempotency-Key'] = crypto.randomUUID();
   }
-  const res = await fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), credentials: 'same-origin', cache: opts.cache || 'default' });
+  let res;
+  try {
+    res = await fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), credentials: 'same-origin', cache: opts.cache || 'default' });
+  } catch (err) {
+    // Behind Cloudflare Access an admin call without the Access cookie is redirected to the Access
+    // login on another origin, which fetch cannot follow: it surfaces as a network error.
+    if (path.startsWith('/admin/')) throw new ApiError(0, 'access_required', 'Entre pelo Cloudflare Access para usar o painel de administração.');
+    throw err;
+  }
   if (opts.text && res.ok) return res.text();
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {

@@ -68,6 +68,7 @@ export const ERRORS = {
   max_owned: 'Você já tem o máximo de cópias desta carta.',
   not_sellable: 'Esta carta não pode ser vendida.',
   step_up_required: 'Confirme sua identidade entrando de novo com o Google.',
+  access_required: 'Entre pelo Cloudflare Access para usar o painel de administração.',
   edit_conflict: 'Outra pessoa alterou este item. Recarregue antes de salvar.',
   invalid_value: 'Valor inválido.',
   no_consent: 'Esta carta não tem consentimento para animação.',

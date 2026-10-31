@@ -15,6 +15,7 @@ import { registerAdminCatalog } from './admin/catalog.js';
 import { registerAnimations } from './admin/animations.js';
 import { registerGoogleAuth } from './auth/google.js';
 import { purgeExpiredSessions, readSession, SESSION_COOKIE, sessionEvents } from './auth/session.js';
+import { cfAccessVerifier } from './auth/cfaccess.js';
 import { startBackups } from './backup.js';
 import { migrate, openDb } from './db.js';
 import { loadLibrary, starterCollection, syncCatalog } from './economy/catalog.js';
@@ -93,6 +94,7 @@ export function createServer(overrides = {}) {
   const apiLimiter = new KeyedLimiter(config.apiRateLimitPerSecond, config.apiRateLimitBurst);
   const trustedProxies = cidrList(config.trustedProxies);
   const adminAllow = cidrList(config.adminAllowCidrs);
+  const cfAccess = cfAccessVerifier(config);
 
   const app = Fastify({
     logger: false,
@@ -124,6 +126,9 @@ export function createServer(overrides = {}) {
     registerAdminCatalog(api, { db, config });
     registerAdmin(api, { db, config, rooms });
     registerAnimations(api, { db, config });
+    // Top-level entry to the admin: behind Cloudflare Access this navigation is what triggers the
+    // Access login (an XHR cannot follow it); then back to the admin pages.
+    api.get('/api/admin/access', async (_req, reply) => reply.redirect(`${config.siteBase}#/admin`));
   });
 
   app.addHook('onRequest', async (req, reply) => {
@@ -134,8 +139,9 @@ export function createServer(overrides = {}) {
       reply.headers(securityHeaders(config)).header('Cache-Control', 'no-store');
       if (!apiLimiter.take(req.clientIp)) return reply.code(429).send(apiError('rate_limited'));
       // The matched route, not the raw URL: "/api//admin" or "%2F" tricks cannot slip past it.
-      if (adminAllow && req.routeOptions.url?.startsWith('/api/admin/') && !inList(adminAllow, req.clientIp)) {
-        return reply.code(403).send(apiError('forbidden'));
+      if (req.routeOptions.url?.startsWith('/api/admin/')) {
+        if (adminAllow && !inList(adminAllow, req.clientIp)) return reply.code(403).send(apiError('forbidden'));
+        if (cfAccess && !(await cfAccess(req.raw))) return reply.code(403).send(apiError('access_required'));
       }
     }
     return undefined;

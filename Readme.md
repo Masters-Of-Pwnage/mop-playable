@@ -88,6 +88,7 @@ Variáveis de ambiente (todas opcionais):
 | `CROSS_ORIGIN_ISOLATION` | `0` | Envia cabeçalhos COOP/COEP. |
 | `TRUSTED_PROXIES` | (qualquer) | CIDRs dos proxies que podem informar o IP do cliente (`CLIENT_IP_HEADER`/`X-Forwarded-For`). Vindo de outro endereço, vale o IP da conexão. Defina sempre que algo além do proxy alcançar a porta do servidor. |
 | `ADMIN_ALLOW_CIDRS` | (qualquer) | CIDRs que podem usar `/api/admin/*` (ex.: rede de casa e VPN). Fora da lista: 403 antes do login. |
+| `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD` | (vazio) | Cloudflare Access na frente de `/api/admin/*` (ex.: `somosum.cloudflareaccess.com` e a AUD da aplicação). Com os dois, o servidor também exige o JWT do Access nessas rotas. O admin entra por `/api/admin/access`; o `scripts/anim/push.mjs` usa um service token (`CF_ACCESS_CLIENT_ID`/`CF_ACCESS_CLIENT_SECRET`). |
 | `REQUEST_TIMEOUT_SECONDS` | `30` | Prazo para receber uma requisição HTTP inteira (cabeçalhos + corpo). |
 | `CSP_MODE` | `enforce` | `report` manda a CSP das páginas como `Report-Only` (só para diagnosticar um asset novo). |
 | `PRIVACY_CONTROLLER`, `PRIVACY_CONTACT` | (vazio) | Controlador dos dados e canal do titular (e-mail ou URL https) exibidos no aviso de privacidade. |

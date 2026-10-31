@@ -74,6 +74,9 @@ export function loadConfig(overrides = {}) {
     trustedProxies: list('TRUSTED_PROXIES'),
     // When set, /api/admin/* only answers these client addresses (CIDR), whatever the login says.
     adminAllowCidrs: list('ADMIN_ALLOW_CIDRS'),
+    // Cloudflare Access application protecting /api/admin/* (team domain, e.g. "somosum.cloudflareaccess.com",
+    // and the application's AUD tag). When set, /api/admin/* also needs a valid Access JWT.
+    cfAccess: { teamDomain: process.env.CF_ACCESS_TEAM_DOMAIN || '', aud: process.env.CF_ACCESS_AUD || '', certsUrl: '' },
     // Persistent state: SQLite database and uploaded media. Mount a volume here in production.
     dataDir,
     dbFile: process.env.DB_FILE || path.join(dataDir, 'mop.sqlite'),
