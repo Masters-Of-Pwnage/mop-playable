@@ -14,6 +14,9 @@ export const DEFAULTS = {
   'trade.new_account_days': 7,
   'trade.new_account_matches': 10,
   'admin.adjust_cap': { CR: 5000, PWC: 500 },
+  'packs.pity_n': 10,
+  'match.min_turns': 4,
+  'match.min_seconds': 120,
 };
 
 export function getSetting(db, key) {

@@ -7,6 +7,9 @@ import { WebSocketServer } from 'ws';
 import { loadConfig } from './config.js';
 import { registerAccountRoutes } from './api/me.js';
 import { registerShopRoutes } from './api/shop.js';
+import { registerCodeRoutes } from './api/codes.js';
+import { registerPackRoutes } from './api/packs.js';
+import { registerTradeRoutes } from './api/trades.js';
 import { applyFlagOverrides, registerAdmin } from './admin/admin.js';
 import { registerAdminCatalog } from './admin/catalog.js';
 import { registerGoogleAuth } from './auth/google.js';
@@ -18,7 +21,8 @@ import { Bucket, KeyedLimiter } from './ratelimit.js';
 import { RoomManager } from './rooms.js';
 import { apiError } from './errors.js';
 import { serveStatic } from './static.js';
-import { cleanText, normalizeCode, parseMessage, ERRORS, PROTOCOL_VERSION, MAX_NAME, MAX_ROOM_NAME } from './protocol.js';
+import { cleanText, normalizeCode, parseMessage, ERRORS, PROTOCOL_VERSION, SUPPORTED_PROTOCOLS, MAX_NAME, MAX_ROOM_NAME } from './protocol.js';
+import { settleMatch, validateCollectionDeck } from './economy/matches.js';
 
 /** URL parsing that never throws: a request target such as "//" makes `new URL(raw, base)` throw. */
 function safeUrl(raw) {
@@ -78,6 +82,9 @@ export function createServer(overrides = {}) {
     registerGoogleAuth(api, { db, config, starter });
     registerAccountRoutes(api, { db, config });
     registerShopRoutes(api, { db, config });
+    registerTradeRoutes(api, { db, config });
+    registerCodeRoutes(api, { db, config });
+    registerPackRoutes(api, { db, config });
     registerAdminCatalog(api, { db, config });
     registerAdmin(api, { db, config, rooms });
   });
@@ -239,7 +246,8 @@ export function createServer(overrides = {}) {
 
     function handleHandshake(msg) {
       if (msg.type === 'hello') {
-        if (Number(msg.protocol || PROTOCOL_VERSION) !== PROTOCOL_VERSION) {
+        const protocol = Number(msg.protocol || 1);
+        if (!SUPPORTED_PROTOCOLS.includes(protocol)) {
           fail('version');
           return;
         }
@@ -247,7 +255,7 @@ export function createServer(overrides = {}) {
         const name = account ? account.display_name : cleanText(msg.name, MAX_NAME) || 'Hacker';
         session = rooms.createSession({ name, ip, transport: send });
         session.userId = account ? account.id : null;
-        const welcome = { type: 'welcome', id: session.id, token: session.token, protocol: PROTOCOL_VERSION };
+        const welcome = { type: 'welcome', id: session.id, token: session.token, protocol };
         if (account) welcome.account = { publicId: account.public_id, displayName: account.display_name };
         send(welcome);
         return;
@@ -273,6 +281,44 @@ export function createServer(overrides = {}) {
         return;
       }
       fail('not_ready');
+    }
+
+    /** Collection room: the server validates the account deck; the host gets both canonical lists. */
+    function handleDeck(msg) {
+      const room = session.room;
+      if (!room) return fail('not_in_room');
+      if (room.mode !== 'colecao') return fail('not_collection_room');
+      if (room.started) return fail('room_started');
+      const { deck, error, problems } = validateCollectionDeck(db, session.userId, msg.deckId);
+      if (error) {
+        room.decks[session.seat] = null;
+        send({ type: 'error', code: error, message: ERRORS[error], problems });
+        return undefined;
+      }
+      room.decks[session.seat] = { userId: session.userId, ...deck };
+      rooms.broadcast(room, { type: 'deck_ok', seat: session.seat, name: deck.name, count: deck.list.length });
+      if (room.decks[0] && room.decks[1] && room.seats[0]) {
+        rooms.deliver(room.seats[0], { type: 'decks', lists: room.decks.map((d) => d.list), names: room.decks.map((d) => d.name) });
+      }
+      return undefined;
+    }
+
+    /** Collection room: both seats report the winner; rewards only when they agree (RF-2.21). */
+    function handleResult(msg) {
+      const room = session.room;
+      if (!room || room.mode !== 'colecao' || !room.startedAt || !room.decks[0] || !room.decks[1]) return undefined;
+      const winnerSeat = Number(msg.winnerSeat);
+      const turns = Number(msg.turns);
+      if (![-1, 0, 1].includes(winnerSeat) || !Number.isInteger(turns) || turns < 0 || turns > 1000) return fail('bad_request');
+      if (room.reports[session.seat]) return undefined;
+      room.reports[session.seat] = { winnerSeat, turns };
+      if (!room.reports[0] || !room.reports[1]) return undefined;
+      const result = settleMatch(db, { code: room.code, users: room.decks.map((d) => d.userId), reports: room.reports, startedAt: room.startedAt });
+      room.startedAt = null; // one settlement per started match
+      room.seats.forEach((s, seat) => {
+        if (s) rooms.deliver(s, { type: 'match_result', status: result.status, reward: result.rewards.find((r) => r.seat === seat)?.amount || 0 });
+      });
+      return undefined;
     }
 
     function tooManyJoinFailures() {
@@ -308,9 +354,15 @@ export function createServer(overrides = {}) {
           session.subscribed = false;
           break;
         case 'create': {
+          const mode = msg.mode === 'colecao' ? 'colecao' : 'livre';
+          if (mode === 'colecao' && !session.userId) {
+            fail('account_required');
+            break;
+          }
           const result = rooms.createRoom(session, {
             name: cleanText(msg.name, MAX_ROOM_NAME),
             visibility: msg.visibility === 'private' ? 'private' : 'public',
+            mode,
           });
           if (result.error) fail(result.error);
           else send({ type: 'joined', room: rooms.roomView(result.room), seat: session.seat });
@@ -339,6 +391,12 @@ export function createServer(overrides = {}) {
           break;
         case 'started':
           rooms.markStarted(session);
+          break;
+        case 'deck':
+          handleDeck(msg);
+          break;
+        case 'result':
+          handleResult(msg);
           break;
         case 'relay': {
           if (!session.room) {

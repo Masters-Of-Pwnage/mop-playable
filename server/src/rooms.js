@@ -22,6 +22,7 @@ export class Session {
     this.room = null;
     this.seat = -1;
     this.subscribed = false;
+    this.userId = null; // account bound to this lobby session (null = guest)
     this.buffer = [];
     this.bufferBytes = 0;
     this.awayTimer = null;
@@ -130,7 +131,7 @@ export class RoomManager {
 
   // ---------------------------------------------------------------- rooms
 
-  createRoom(session, { name, visibility }) {
+  createRoom(session, { name, visibility, mode = 'livre' }) {
     if (session.room) this.leaveRoom(session, 'left');
     if (this.rooms.size >= this.config.maxRooms) return { error: 'server_full' };
     if (this.config.maxRoomsPerIp) {
@@ -147,6 +148,11 @@ export class RoomManager {
       createdAt: Date.now(),
       seats: [session, null],
       started: false,
+      // "colecao": both seats are accounts and play validated decks they own (docs/sdd/00 §6).
+      mode: mode === 'colecao' ? 'colecao' : 'livre',
+      decks: [null, null], // colecao: { userId, id, name, list } validated by the server
+      reports: [null, null], // colecao: { winnerSeat, turns } sent by each seat at the end
+      startedAt: null,
     };
     this.rooms.set(code, room);
     session.room = room;
@@ -163,6 +169,10 @@ export class RoomManager {
     // The host already streamed this match to its guest: a seat freed mid-game is not up for grabs.
     // The original guest gets back in with `resume` (its token) while the grace period lasts.
     if (room.started) return { error: 'room_started' };
+    if (room.mode === 'colecao') {
+      if (!session.userId) return { error: 'account_required' };
+      if (room.seats.some((s) => s && s.userId === session.userId)) return { error: 'same_account' };
+    }
     const seat = room.seats.findIndex((s) => s === null);
     if (seat === -1) return { error: 'room_full' };
     if (session.room) this.leaveRoom(session, 'left');
@@ -184,6 +194,10 @@ export class RoomManager {
     if (!room) return;
     room.seats[session.seat] = null;
     const seat = session.seat;
+    if (room.decks) {
+      room.decks[seat] = null;
+      room.reports = [null, null];
+    }
     session.room = null;
     session.seat = -1;
     this._clearBuffer(session);
@@ -228,8 +242,15 @@ export class RoomManager {
   markStarted(session) {
     if (session.room && session.seat === 0) {
       session.room.started = true;
+      session.room.startedAt = Date.now();
+      session.room.reports = [null, null];
       this._lobbyChanged(session.room);
     }
+  }
+
+  /** Sends a server message to every seat of a room. */
+  broadcast(room, msg) {
+    for (const s of room.seats) if (s) this.deliver(s, msg);
   }
 
   /** Forwards an opaque game payload to the other seat. Returns false when alone. */
@@ -253,6 +274,7 @@ export class RoomManager {
         host: room.seats[0].name,
         createdAt: room.createdAt,
         players: 1,
+        mode: room.mode,
       });
     }
     out.sort((a, b) => b.createdAt - a.createdAt);
@@ -265,7 +287,9 @@ export class RoomManager {
       name: room.name,
       visibility: room.visibility,
       started: room.started,
+      mode: room.mode,
       players: room.seats.map((s, seat) => (s ? this._playerView(s, seat) : null)),
+      decks: room.decks.map((d) => (d ? { name: d.name, count: d.list.length } : null)),
     };
   }
 

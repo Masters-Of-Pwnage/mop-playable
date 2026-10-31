@@ -15,6 +15,7 @@ export const userOwner = (userId) => `user:${userId}`;
 export const MINT = 'system:mint';
 export const SHOP = 'system:shop';
 export const BURN = 'system:burn';
+export const CONVERSION = 'system:conversion';
 
 /** The wallet row of (owner, currency), created on first use. */
 export function wallet(db, owner, currency) {
@@ -85,6 +86,20 @@ export function post(db, { kind, key, actor = null, entries = [], cards = [], me
     }
     return { tx: db.prepare('SELECT * FROM ledger_tx WHERE id = ?').get(txId), replayed: false };
   });
+}
+
+/**
+ * Reversal (RF-2.3): a mirror transaction of `txId`, once. Fails with insufficient_* when the player
+ * already spent what it would take back. Returns { tx, replayed }.
+ */
+export function reverseTransaction(db, txId, actorId, reason) {
+  const t = db.prepare('SELECT * FROM ledger_tx WHERE id = ?').get(txId);
+  if (!t) throw new EconomyError('not_found', 404);
+  if (t.kind === 'reversal') throw new EconomyError('bad_request', 400);
+  const entries = db.prepare('SELECT w.owner, w.currency, e.amount FROM ledger_entries e JOIN wallets w ON w.id = e.wallet_id WHERE e.tx_id = ?').all(t.id)
+    .map((e) => ({ owner: e.owner, currency: e.currency, amount: -e.amount }));
+  const cards = db.prepare('SELECT user_id, card_uid, delta FROM inventory_moves WHERE tx_id = ?').all(t.id).map((m) => ({ userId: m.user_id, uid: m.card_uid, delta: -m.delta }));
+  return post(db, { kind: 'reversal', key: `reversal:${t.id}`, actor: actorId, reason, reverses: t.id, entries, cards, meta: { of: t.kind } });
 }
 
 /** Invariants I1–I5 of 00-arquitetura §4. Returns a list of violations (empty = healthy). */

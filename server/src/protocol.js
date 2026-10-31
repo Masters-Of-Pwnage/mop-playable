@@ -1,6 +1,8 @@
 import { CODE_ALPHABET, CODE_LENGTH } from './rooms.js';
 
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
+/** v1 clients (guest-only builds) keep working; v2 adds collection rooms (deck/decks/result). */
+export const SUPPORTED_PROTOCOLS = [1, 2];
 export const MAX_NAME = 24;
 export const MAX_ROOM_NAME = 32;
 
@@ -52,7 +54,6 @@ export const ERRORS = {
   bad_csrf: 'Sessão inválida para esta ação. Recarregue a página.',
   accounts_disabled: 'Contas não estão habilitadas neste servidor.',
   too_many_decks: 'Limite de decks da conta atingido.',
-  deck_invalid: 'Deck inválido.',
   confirm_mismatch: 'A confirmação não confere.',
   shop_disabled: 'A loja está fechada no momento.',
   idempotency_required: 'Requisição sem chave de idempotência.',
@@ -69,4 +70,21 @@ export const ERRORS = {
   step_up_required: 'Confirme sua identidade entrando de novo com o Google.',
   edit_conflict: 'Outra pessoa alterou este item. Recarregue antes de salvar.',
   invalid_value: 'Valor inválido.',
+  rate_changed: 'A taxa de conversão mudou. Confira o novo valor.',
+  trades_disabled: 'As trocas estão desligadas no momento.',
+  trade_locked: 'Sua conta ainda não pode trocar (conta nova ou trocas travadas).',
+  trade_peer_locked: 'Este jogador ainda não pode trocar.',
+  trade_stale: 'A troca não é mais possível: alguém não tem mais os itens.',
+  trade_changed: 'A oferta mudou. Confira antes de aceitar.',
+  trade_closed: 'Esta troca não está mais aberta.',
+  not_tradeable: 'Esta carta não pode ser trocada.',
+  user_not_found: 'Jogador não encontrado.',
+  code_invalid: 'Código inválido ou expirado.',
+  code_used: 'Você já usou este código.',
+  packs_disabled: 'Pacotes não estão disponíveis.',
+  adult_required: 'Pacotes exigem a confirmação de maioridade no seu perfil.',
+  account_required: 'Esta sala exige conta. Entre com o Google.',
+  deck_invalid: 'Deck inválido para o modo Coleção.',
+  not_collection_room: 'Esta sala não é do modo Coleção.',
+  same_account: 'Você não pode jogar contra a sua própria conta.',
 };

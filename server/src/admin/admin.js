@@ -4,7 +4,7 @@ import { apiError } from '../errors.js';
 import { revokeUserSessions } from '../auth/session.js';
 import { audit } from '../auth/users.js';
 import { FEATURES } from '../config.js';
-import { balances, checkInvariants, EconomyError, MINT, post, SHOP, userOwner } from '../economy/ledger.js';
+import { balances, checkInvariants, EconomyError, MINT, post, reverseTransaction, SHOP, userOwner } from '../economy/ledger.js';
 import { DEFAULTS, getSetting, setSetting } from '../economy/settings.js';
 import { adminGuards, canActOn, ROLE_RANK, stepUp } from './guards.js';
 
@@ -325,13 +325,14 @@ export function registerAdmin(app, { db, config, rooms }) {
     const t = db.prepare('SELECT * FROM ledger_tx WHERE id = ?').get(Number(req.params.tx));
     if (!t) return reply.code(404).send(apiError('not_found'));
     if (t.kind === 'reversal') return reply.code(400).send(apiError('bad_request', 'Um estorno não pode ser estornado.'));
-    const entries = db.prepare('SELECT w.owner, w.currency, e.amount FROM ledger_entries e JOIN wallets w ON w.id = e.wallet_id WHERE e.tx_id = ?').all(t.id)
-      .map((e) => ({ owner: e.owner, currency: e.currency, amount: -e.amount }));
-    const cards = db.prepare('SELECT user_id, card_uid, delta FROM inventory_moves WHERE tx_id = ?').all(t.id).map((m) => ({ userId: m.user_id, uid: m.card_uid, delta: -m.delta }));
     try {
       const res = transaction(db, () => {
-        const r = post(db, { kind: 'reversal', key: `reversal:${t.id}`, actor: req.auth.user.id, reason: req.body.reason, reverses: t.id, entries, cards, meta: { of: t.kind } });
-        if (!r.replayed) audit(db, { actor: req.auth.user.id, action: 'ledger.reverse', target: `tx:${t.id}`, after: { reversal: r.tx.id, reason: req.body.reason }, ip: req.clientIp });
+        const r = reverseTransaction(db, t.id, req.auth.user.id, req.body.reason);
+        if (!r.replayed) {
+          audit(db, { actor: req.auth.user.id, action: 'ledger.reverse', target: `tx:${t.id}`, after: { reversal: r.tx.id, reason: req.body.reason }, ip: req.clientIp });
+          // A reversed trade is shown as such to both players.
+          db.prepare("UPDATE trades SET status = 'revertida', resolved_at = ? WHERE tx_id = ?").run(Date.now(), t.id);
+        }
         return r;
       });
       if (res.replayed) return reply.code(409).send(apiError('bad_request', 'Esta transação já foi estornada.'));

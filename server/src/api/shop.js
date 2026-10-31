@@ -3,8 +3,8 @@ import { apiError } from '../errors.js';
 import { requireUser } from '../auth/session.js';
 import { effective, publicEntry, rarityDefaults, unavailableReason } from '../economy/catalog.js';
 import { claimDaily } from '../economy/grants.js';
-import { balances, EconomyError, post, SHOP, userOwner, wallet } from '../economy/ledger.js';
-import { getSetting } from '../economy/settings.js';
+import { balances, CONVERSION, EconomyError, MINT, post, SHOP, userOwner, wallet } from '../economy/ledger.js';
+import { gameDay, getSetting } from '../economy/settings.js';
 
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9_-]{8,64}$/;
 const MAX_ITEMS = 60;
@@ -99,6 +99,33 @@ export function sellCards(db, userId, items, clientKey) {
   });
 }
 
+/**
+ * PwnCoins -> credits, one way only (RF-2.9). The rate is read inside the transaction and must match
+ * what the player saw; conversions per game day are capped.
+ */
+export function convertPwc(db, userId, pwc, expectedRate, clientKey, now = Date.now()) {
+  const key = `convert:${userId}:${clientKey}`;
+  return transaction(db, () => {
+    const prior = db.prepare('SELECT * FROM ledger_tx WHERE idempotency_key = ?').get(key);
+    if (prior) return { tx: prior, replayed: true };
+    const rate = getSetting(db, 'economy.pwc_to_cr');
+    if (expectedRate !== rate) throw new EconomyError('rate_changed', 409, { rate });
+    const day = gameDay(now);
+    const done = db.prepare(`SELECT COALESCE(SUM(json_extract(meta, '$.pwc')), 0) AS n FROM ledger_tx
+                             WHERE kind = 'convert' AND actor_user_id = ? AND json_extract(meta, '$.day') = ?`).get(userId, day).n;
+    const max = getSetting(db, 'economy.convert_max_per_day');
+    if (done + pwc > max) throw new EconomyError('limit_reached', 409, { left: Math.max(0, max - done) });
+    return post(db, {
+      kind: 'convert', key, actor: userId,
+      entries: [
+        { owner: userOwner(userId), currency: 'PWC', amount: -pwc }, { owner: CONVERSION, currency: 'PWC', amount: pwc },
+        { owner: MINT, currency: 'CR', amount: -pwc * rate }, { owner: userOwner(userId), currency: 'CR', amount: pwc * rate },
+      ],
+      meta: { pwc, rate, credits: pwc * rate, day },
+    });
+  });
+}
+
 /** Catalog, wallet, collection, statement, daily bonus and the card shop (docs/sdd/02-economia.md §6). */
 export function registerShopRoutes(app, { db, config }) {
   const auth = requireUser(db, config);
@@ -132,10 +159,17 @@ export function registerShopRoutes(app, { db, config }) {
     };
   });
 
-  app.get('/api/me/wallet', { preValidation: auth }, async (req) => ({
-    balances: balances(db, req.auth.user.id),
-    pwcToCr: getSetting(db, 'economy.pwc_to_cr'),
-  }));
+  app.get('/api/me/wallet', { preValidation: auth }, async (req) => {
+    const userId = req.auth.user.id;
+    const day = gameDay();
+    const converted = db.prepare(`SELECT COALESCE(SUM(json_extract(meta, '$.pwc')), 0) AS n FROM ledger_tx
+                                  WHERE kind = 'convert' AND actor_user_id = ? AND json_extract(meta, '$.day') = ?`).get(userId, day).n;
+    return {
+      balances: balances(db, userId),
+      pwcToCr: getSetting(db, 'economy.pwc_to_cr'),
+      convertLeftToday: Math.max(0, getSetting(db, 'economy.convert_max_per_day') - converted),
+    };
+  });
 
   app.get('/api/me/collection', { preValidation: auth }, async (req) => ({ cards: collection(req.auth.user.id) }));
 
@@ -159,6 +193,21 @@ export function registerShopRoutes(app, { db, config }) {
       entries: rows.map((r) => ({ tx: r.id, kind: r.kind, currency: r.currency, amount: r.amount, cards: cardsByTx.get(r.id) || [], meta: r.meta ? JSON.parse(r.meta) : null, createdAt: r.created_at })),
       next: rows.length === limit ? rows[rows.length - 1].id : null,
     };
+  });
+
+  app.post('/api/me/convert', {
+    preValidation: auth,
+    schema: { body: { type: 'object', required: ['pwc', 'expectedRate'], additionalProperties: false, properties: { pwc: { type: 'integer', minimum: 1, maximum: 1_000_000 }, expectedRate: { type: 'integer', minimum: 1 } } } },
+  }, async (req, reply) => {
+    const key = idempotencyKey(req, reply);
+    if (!key) return reply;
+    const userId = req.auth.user.id;
+    try {
+      const { tx, replayed } = convertPwc(db, userId, req.body.pwc, req.body.expectedRate, key);
+      return { tx: tx.id, replayed, balances: balances(db, userId) };
+    } catch (err) {
+      return sendEconomyError(reply, err);
+    }
   });
 
   app.post('/api/me/daily', { preValidation: auth }, async (req) => {

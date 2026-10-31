@@ -38,6 +38,14 @@ export class KeyedLimiter {
     return bucket.take(cost);
   }
 
+  /** True when the next take() would fail (lets callers count only failed attempts). */
+  blocked(key) {
+    const bucket = this.buckets.get(key);
+    if (!bucket) return false;
+    bucket.refill();
+    return bucket.tokens < 1;
+  }
+
   sweep() {
     for (const [key, bucket] of this.buckets) {
       bucket.refill();
