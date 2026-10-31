@@ -1,0 +1,25 @@
+# Fly.io deployment (site + lobby server). `fly launch --copy-config` then `fly deploy`.
+app = "masters-of-pwnage"
+primary_region = "gru"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8787"
+  TRUST_PROXY = "1"
+  # Fly writes Fly-Client-IP itself; X-Forwarded-For can carry client-written entries.
+  CLIENT_IP_HEADER = "Fly-Client-IP"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "5s"
+  method = "GET"
+  path = "/health"

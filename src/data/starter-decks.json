@@ -1,0 +1,974 @@
+[
+  {
+    "id": "c0ffee00-0000-4000-8000-000000000001",
+    "name": "Black Hat",
+    "subtitle": "Preto / Vermelho",
+    "author": "Masters of Pwnage",
+    "author_social": "",
+    "builtin": true,
+    "cards": [
+      {
+        "uid": "4c5c8e6f-ccd1-4cbd-924b-25d89d7f56d5",
+        "id": "4c5c8e6f-ccd1-4cbd-924b-25d89d7f56d5",
+        "name": "Alexandra - Nutcake",
+        "amount": 2
+      },
+      {
+        "uid": "09dda57d-b23c-4de9-b5c7-af96cd797559",
+        "id": "09dda57d-b23c-4de9-b5c7-af96cd797559",
+        "name": "AlligatorCon",
+        "amount": 4
+      },
+      {
+        "uid": "f91eda1e-4754-4d17-b891-d2c51d50f9d2",
+        "id": "f91eda1e-4754-4d17-b891-d2c51d50f9d2",
+        "name": "Antônio coOler",
+        "amount": 2
+      },
+      {
+        "uid": "42b97779-7f9f-4f08-8d12-ef02ae99fada",
+        "id": "42b97779-7f9f-4f08-8d12-ef02ae99fada",
+        "name": "Apura",
+        "amount": 4
+      },
+      {
+        "uid": "3febe20f-42b4-4ed5-a727-97a2cf909eb2",
+        "id": "3febe20f-42b4-4ed5-a727-97a2cf909eb2",
+        "name": "arqu1t3t0s",
+        "amount": 2
+      },
+      {
+        "uid": "5d4a6fe4-0c7f-4ac5-9f9c-7cce4c6fc57f",
+        "id": "5d4a6fe4-0c7f-4ac5-9f9c-7cce4c6fc57f",
+        "name": "Beephish.com-5",
+        "amount": 1
+      },
+      {
+        "uid": "0a9c7d90-5426-4f92-8e0b-b0786baebb54",
+        "id": "0a9c7d90-5426-4f92-8e0b-b0786baebb54",
+        "name": "Black Hat Conference",
+        "amount": 1
+      },
+      {
+        "uid": "8e9a17f2-9e0f-4d06-92ad-67f327e2aa82",
+        "id": "8e9a17f2-9e0f-4d06-92ad-67f327e2aa82",
+        "name": "BrasNET",
+        "amount": 4
+      },
+      {
+        "uid": "c1623c2b-8d0a-4c34-9d6c-f86f4c7e6e8e",
+        "id": "c1623c2b-8d0a-4c34-9d6c-f86f4c7e6e8e",
+        "name": "BSidesJP - BSides João Pessoa",
+        "amount": 4
+      },
+      {
+        "uid": "e09f54e9-e8f0-4c3a-9ca0-3fa0eafb4ed4",
+        "id": "e09f54e9-e8f0-4c3a-9ca0-3fa0eafb4ed4",
+        "name": "BSidesRJ",
+        "amount": 1
+      },
+      {
+        "uid": "7b6de7b7-6b5f-4ae8-83f0-c1d8db9d78c6",
+        "id": "7b6de7b7-6b5f-4ae8-83f0-c1d8db9d78c6",
+        "name": "BSidesSP 20th Edição",
+        "amount": 2
+      },
+      {
+        "uid": "9640c11e-13c4-4fed-87dc-7ba6a07f2811",
+        "id": "9640c11e-13c4-4fed-87dc-7ba6a07f2811",
+        "name": "Clube dos Mercenários",
+        "amount": 1
+      },
+      {
+        "uid": "6f9f1bcf-af32-4b05-a8e4-ba09e37aef59",
+        "id": "6f9f1bcf-af32-4b05-a8e4-ba09e37aef59",
+        "name": "CryptoRave",
+        "amount": 1
+      },
+      {
+        "uid": "dd79a7b8-f582-4f64-9c5d-b3c5d9f33c3f",
+        "id": "dd79a7b8-f582-4f64-9c5d-b3c5d9f33c3f",
+        "name": "CSH-2",
+        "amount": 2
+      },
+      {
+        "uid": "30f0a9e2-65ed-4cc7-b4b8-cd7a94f4a4ae",
+        "id": "30f0a9e2-65ed-4cc7-b4b8-cd7a94f4a4ae",
+        "name": "Cult of Dead Cow",
+        "amount": 2
+      },
+      {
+        "uid": "b3a42f07-2a0b-4e52-b1e6-adb8df4c239a",
+        "id": "b3a42f07-2a0b-4e52-b1e6-adb8df4c239a",
+        "name": "Dmr, Senhor das Maquinas",
+        "amount": 2
+      },
+      {
+        "uid": "4de5f82b-62fb-4551-9aa2-fa8b02453236",
+        "id": "4de5f82b-62fb-4551-9aa2-fa8b02453236",
+        "name": "Elbert TuxTrack",
+        "amount": 2
+      },
+      {
+        "uid": "9d12da8c-02e4-4389-a2a2-61eac7d25b79",
+        "id": "9d12da8c-02e4-4389-a2a2-61eac7d25b79",
+        "name": "Eva Pereira",
+        "amount": 2
+      },
+      {
+        "uid": "f8c42b4c-6b41-4cad-b67c-cf5db1c51b64",
+        "id": "f8c42b4c-6b41-4cad-b67c-cf5db1c51b64",
+        "name": "Fernando Mercês",
+        "amount": 2
+      },
+      {
+        "uid": "f50f0f90-7f91-4eaa-8d58-9ea03f8f7cfe",
+        "id": "f50f0f90-7f91-4eaa-8d58-9ea03f8f7cfe",
+        "name": "FreeBSD Brasil",
+        "amount": 1
+      },
+      {
+        "uid": "8b0fd0bd-7171-4bda-b48c-efcd0fac4aa3",
+        "id": "8b0fd0bd-7171-4bda-b48c-efcd0fac4aa3",
+        "name": "Gabriel Barbosa",
+        "amount": 2
+      },
+      {
+        "uid": "dbe58a38-2da7-4d33-a63b-57e5e9d07f15",
+        "id": "dbe58a38-2da7-4d33-a63b-57e5e9d07f15",
+        "name": "Helvio JR - Dobrador de EDR-2",
+        "amount": 2
+      },
+      {
+        "uid": "f6c61cbc-eee0-4b3d-a33b-7fee0b688197",
+        "id": "f6c61cbc-eee0-4b3d-a33b-7fee0b688197",
+        "name": "Luiz Cabuloso",
+        "amount": 2
+      },
+      {
+        "uid": "b0fcb9c8-4b73-4e41-8b59-81fdc61ea211",
+        "id": "b0fcb9c8-4b73-4e41-8b59-81fdc61ea211",
+        "name": "Magno Logan",
+        "amount": 2
+      },
+      {
+        "uid": "8bfcf7b7-b8ef-4ecb-8fe3-d1f8b3dea4c2",
+        "id": "8bfcf7b7-b8ef-4ecb-8fe3-d1f8b3dea4c2",
+        "name": "Marcelo Caiado-4",
+        "amount": 2
+      },
+      {
+        "uid": "d2a88fe9-a5a4-4a2b-b731-86ee50787bf0",
+        "id": "d2a88fe9-a5a4-4a2b-b731-86ee50787bf0",
+        "name": "Nash Leon",
+        "amount": 2
+      },
+      {
+        "uid": "6e6da0e6-8425-4e3f-b3c3-47d9c8c5b165",
+        "id": "6e6da0e6-8425-4e3f-b3c3-47d9c8c5b165",
+        "name": "Oliveira Jr.",
+        "amount": 2
+      },
+      {
+        "uid": "b83d7a73-ef31-4952-8c55-59f50f0acb67",
+        "id": "b83d7a73-ef31-4952-8c55-59f50f0acb67",
+        "name": "Rafael Choko",
+        "amount": 2
+      },
+      {
+        "uid": "a8f7ed10-9c8b-4943-b0b9-3c81d61b5b6b",
+        "id": "a8f7ed10-9c8b-4943-b0b9-3c81d61b5b6b",
+        "name": "Ranieri Romera",
+        "amount": 2
+      }
+    ]
+  },
+  {
+    "id": "c0ffee00-0000-4000-8000-000000000002",
+    "name": "Blue Team",
+    "subtitle": "Azul / Branco",
+    "author": "Masters of Pwnage",
+    "author_social": "",
+    "builtin": true,
+    "cards": [
+      {
+        "uid": "a4d2bf89-8d74-4f0f-9e76-a471b2f1a61a",
+        "id": "a4d2bf89-8d74-4f0f-9e76-a471b2f1a61a",
+        "name": "Ada Rosenfeld",
+        "amount": 2
+      },
+      {
+        "uid": "3d051e35-6a68-4ba0-a631-e2e5b9e91e8d",
+        "id": "3d051e35-6a68-4ba0-a631-e2e5b9e91e8d",
+        "name": "Ave de Rapina",
+        "amount": 2
+      },
+      {
+        "uid": "5d4a6fe4-0c7f-4ac5-9f9c-7cce4c6fc57f",
+        "id": "5d4a6fe4-0c7f-4ac5-9f9c-7cce4c6fc57f",
+        "name": "Beephish.com-5",
+        "amount": 1
+      },
+      {
+        "uid": "0a9c7d90-5426-4f92-8e0b-b0786baebb54",
+        "id": "0a9c7d90-5426-4f92-8e0b-b0786baebb54",
+        "name": "Black Hat Conference",
+        "amount": 1
+      },
+      {
+        "uid": "e09f54e9-e8f0-4c3a-9ca0-3fa0eafb4ed4",
+        "id": "e09f54e9-e8f0-4c3a-9ca0-3fa0eafb4ed4",
+        "name": "BSidesRJ",
+        "amount": 1
+      },
+      {
+        "uid": "7b6de7b7-6b5f-4ae8-83f0-c1d8db9d78c6",
+        "id": "7b6de7b7-6b5f-4ae8-83f0-c1d8db9d78c6",
+        "name": "BSidesSP 20th Edição",
+        "amount": 4
+      },
+      {
+        "uid": "3e24ae74-2d32-4b1e-a4c0-3a7adbf27a7d",
+        "id": "3e24ae74-2d32-4b1e-a4c0-3a7adbf27a7d",
+        "name": "Castra Gemina – Bastião de Vigilância Eterna",
+        "amount": 4
+      },
+      {
+        "uid": "8758ca14-efcd-4174-b991-54dd1f0a82ca",
+        "id": "8758ca14-efcd-4174-b991-54dd1f0a82ca",
+        "name": "CISSPBR",
+        "amount": 4
+      },
+      {
+        "uid": "9640c11e-13c4-4fed-87dc-7ba6a07f2811",
+        "id": "9640c11e-13c4-4fed-87dc-7ba6a07f2811",
+        "name": "Clube dos Mercenários",
+        "amount": 1
+      },
+      {
+        "uid": "6f9f1bcf-af32-4b05-a8e4-ba09e37aef59",
+        "id": "6f9f1bcf-af32-4b05-a8e4-ba09e37aef59",
+        "name": "CryptoRave",
+        "amount": 1
+      },
+      {
+        "uid": "2ddad5e5-78b1-4d88-b343-ebb58df3dc4d",
+        "id": "2ddad5e5-78b1-4d88-b343-ebb58df3dc4d",
+        "name": "Daniel Gomes",
+        "amount": 2
+      },
+      {
+        "uid": "cfa99bc7-8b6e-4c0d-ac37-e5cd47d74f1d",
+        "id": "cfa99bc7-8b6e-4c0d-ac37-e5cd47d74f1d",
+        "name": "Endrigo Antonini",
+        "amount": 2
+      },
+      {
+        "uid": "bb4bb6e6-9e2e-4b94-ad9b-4ee8dbd7b0f5",
+        "id": "bb4bb6e6-9e2e-4b94-ad9b-4ee8dbd7b0f5",
+        "name": "Ertffin, Defensor de Redes",
+        "amount": 2
+      },
+      {
+        "uid": "e4dcb8da-4f8b-4e62-a5d4-4ed765a1e809",
+        "id": "e4dcb8da-4f8b-4e62-a5d4-4ed765a1e809",
+        "name": "Felipe Pr0teus, Metamorfo Digital",
+        "amount": 2
+      },
+      {
+        "uid": "4bb6b9e3-6c82-4f24-8901-d4f0ad4b89ca",
+        "id": "4bb6b9e3-6c82-4f24-8901-d4f0ad4b89ca",
+        "name": "Fernando Damião – Defensor Cibernético",
+        "amount": 2
+      },
+      {
+        "uid": "f50f0f90-7f91-4eaa-8d58-9ea03f8f7cfe",
+        "id": "f50f0f90-7f91-4eaa-8d58-9ea03f8f7cfe",
+        "name": "FreeBSD Brasil",
+        "amount": 1
+      },
+      {
+        "uid": "8e944d56-5ac0-4b71-b1d1-83c64f6bbd5f",
+        "id": "8e944d56-5ac0-4b71-b1d1-83c64f6bbd5f",
+        "name": "Gilberto Sudré",
+        "amount": 2
+      },
+      {
+        "uid": "c8d5b8fc-27c4-4c86-940c-ff34d4e88d51",
+        "id": "c8d5b8fc-27c4-4c86-940c-ff34d4e88d51",
+        "name": "Glauco Sampaio-2",
+        "amount": 2
+      },
+      {
+        "uid": "2bc3c9eb-fd67-4b1d-aefe-0f7d44a77197",
+        "id": "2bc3c9eb-fd67-4b1d-aefe-0f7d44a77197",
+        "name": "Hacker Rangers",
+        "amount": 4
+      },
+      {
+        "uid": "a0a3fabb-52c1-4891-adb7-4a3b69c84cca",
+        "id": "a0a3fabb-52c1-4891-adb7-4a3b69c84cca",
+        "name": "Ibliss",
+        "amount": 2
+      },
+      {
+        "uid": "4aa8bd9e-1aa9-4e2c-9a63-b15af3d8a9c0",
+        "id": "4aa8bd9e-1aa9-4e2c-9a63-b15af3d8a9c0",
+        "name": "Jacomo Piccolini",
+        "amount": 2
+      },
+      {
+        "uid": "b2e0d0ef-2a39-4acb-857b-c3d7b69c0a81",
+        "id": "b2e0d0ef-2a39-4acb-857b-c3d7b69c0a81",
+        "name": "Juliana D'addio",
+        "amount": 2
+      },
+      {
+        "uid": "9e388fc0-3d97-4724-a665-d0c07a86c2e7",
+        "id": "9e388fc0-3d97-4724-a665-d0c07a86c2e7",
+        "name": "Leonardo Militelli",
+        "amount": 2
+      },
+      {
+        "uid": "c9efeaf0-ed3d-4da7-b6c8-41d8b8a19e13",
+        "id": "c9efeaf0-ed3d-4da7-b6c8-41d8b8a19e13",
+        "name": "Matheus - O voluntário",
+        "amount": 2
+      },
+      {
+        "uid": "ecb7ab1a-79f2-4704-ac11-b7f19417deaa",
+        "id": "ecb7ab1a-79f2-4704-ac11-b7f19417deaa",
+        "name": "Nelson Novaes Neto-2",
+        "amount": 2
+      },
+      {
+        "uid": "1d7c8b7e-ef72-4d2c-8abb-711fec9f0d8d",
+        "id": "1d7c8b7e-ef72-4d2c-8abb-711fec9f0d8d",
+        "name": "Rafael Silva - rfdslabs",
+        "amount": 2
+      },
+      {
+        "uid": "c8c30a83-b0ca-4e42-825c-6c0bfc07a9a9",
+        "id": "c8c30a83-b0ca-4e42-825c-6c0bfc07a9a9",
+        "name": "T50 Creator (Nelson Brito)",
+        "amount": 2
+      },
+      {
+        "uid": "e3ac0905-8a70-4f6d-957e-b7b9aa95c4f6",
+        "id": "e3ac0905-8a70-4f6d-957e-b7b9aa95c4f6",
+        "name": "Voluntário de Evento",
+        "amount": 2
+      },
+      {
+        "uid": "e60c9b48-bc2d-4d16-8bb4-f49f40edb0e4",
+        "id": "e60c9b48-bc2d-4d16-8bb4-f49f40edb0e4",
+        "name": "Yumi Ambriola",
+        "amount": 2
+      }
+    ]
+  },
+  {
+    "id": "c0ffee00-0000-4000-8000-000000000003",
+    "name": "Underground",
+    "subtitle": "Azul / Preto",
+    "author": "Masters of Pwnage",
+    "author_social": "",
+    "builtin": true,
+    "cards": [
+      {
+        "uid": "9cec7d6b-25cb-426c-a53a-f3a00eca0f3a",
+        "id": "9cec7d6b-25cb-426c-a53a-f3a00eca0f3a",
+        "name": "Alesandro Barreto, Vigilante do Ciberespaco",
+        "amount": 2
+      },
+      {
+        "uid": "09dda57d-b23c-4de9-b5c7-af96cd797559",
+        "id": "09dda57d-b23c-4de9-b5c7-af96cd797559",
+        "name": "AlligatorCon",
+        "amount": 4
+      },
+      {
+        "uid": "3febe20f-42b4-4ed5-a727-97a2cf909eb2",
+        "id": "3febe20f-42b4-4ed5-a727-97a2cf909eb2",
+        "name": "arqu1t3t0s",
+        "amount": 2
+      },
+      {
+        "uid": "5d4a6fe4-0c7f-4ac5-9f9c-7cce4c6fc57f",
+        "id": "5d4a6fe4-0c7f-4ac5-9f9c-7cce4c6fc57f",
+        "name": "Beephish.com-5",
+        "amount": 1
+      },
+      {
+        "uid": "0a9c7d90-5426-4f92-8e0b-b0786baebb54",
+        "id": "0a9c7d90-5426-4f92-8e0b-b0786baebb54",
+        "name": "Black Hat Conference",
+        "amount": 1
+      },
+      {
+        "uid": "b7ed7aab-a969-4cc9-8b20-f6d0a0b88512",
+        "id": "b7ed7aab-a969-4cc9-8b20-f6d0a0b88512",
+        "name": "Bruno MPHX",
+        "amount": 2
+      },
+      {
+        "uid": "d2e1d5fe-baec-41bf-a21f-3fb1138afbce",
+        "id": "d2e1d5fe-baec-41bf-a21f-3fb1138afbce",
+        "name": "BSDaemon",
+        "amount": 2
+      },
+      {
+        "uid": "c1623c2b-8d0a-4c34-9d6c-f86f4c7e6e8e",
+        "id": "c1623c2b-8d0a-4c34-9d6c-f86f4c7e6e8e",
+        "name": "BSidesJP - BSides João Pessoa",
+        "amount": 4
+      },
+      {
+        "uid": "e09f54e9-e8f0-4c3a-9ca0-3fa0eafb4ed4",
+        "id": "e09f54e9-e8f0-4c3a-9ca0-3fa0eafb4ed4",
+        "name": "BSidesRJ",
+        "amount": 1
+      },
+      {
+        "uid": "7b6de7b7-6b5f-4ae8-83f0-c1d8db9d78c6",
+        "id": "7b6de7b7-6b5f-4ae8-83f0-c1d8db9d78c6",
+        "name": "BSidesSP 20th Edição",
+        "amount": 4
+      },
+      {
+        "uid": "3e24ae74-2d32-4b1e-a4c0-3a7adbf27a7d",
+        "id": "3e24ae74-2d32-4b1e-a4c0-3a7adbf27a7d",
+        "name": "Castra Gemina – Bastião de Vigilância Eterna",
+        "amount": 4
+      },
+      {
+        "uid": "f2d1b87d-f9bb-4e8c-9f6f-8dc36c67c94c",
+        "id": "f2d1b87d-f9bb-4e8c-9f6f-8dc36c67c94c",
+        "name": "Chapéu de Palha",
+        "amount": 2
+      },
+      {
+        "uid": "8758ca14-efcd-4174-b991-54dd1f0a82ca",
+        "id": "8758ca14-efcd-4174-b991-54dd1f0a82ca",
+        "name": "CISSPBR",
+        "amount": 2
+      },
+      {
+        "uid": "9640c11e-13c4-4fed-87dc-7ba6a07f2811",
+        "id": "9640c11e-13c4-4fed-87dc-7ba6a07f2811",
+        "name": "Clube dos Mercenários",
+        "amount": 1
+      },
+      {
+        "uid": "6f9f1bcf-af32-4b05-a8e4-ba09e37aef59",
+        "id": "6f9f1bcf-af32-4b05-a8e4-ba09e37aef59",
+        "name": "CryptoRave",
+        "amount": 1
+      },
+      {
+        "uid": "dd79a7b8-f582-4f64-9c5d-b3c5d9f33c3f",
+        "id": "dd79a7b8-f582-4f64-9c5d-b3c5d9f33c3f",
+        "name": "CSH-2",
+        "amount": 2
+      },
+      {
+        "uid": "30f0a9e2-65ed-4cc7-b4b8-cd7a94f4a4ae",
+        "id": "30f0a9e2-65ed-4cc7-b4b8-cd7a94f4a4ae",
+        "name": "Cult of Dead Cow",
+        "amount": 2
+      },
+      {
+        "uid": "9d12da8c-02e4-4389-a2a2-61eac7d25b79",
+        "id": "9d12da8c-02e4-4389-a2a2-61eac7d25b79",
+        "name": "Eva Pereira",
+        "amount": 2
+      },
+      {
+        "uid": "f8c42b4c-6b41-4cad-b67c-cf5db1c51b64",
+        "id": "f8c42b4c-6b41-4cad-b67c-cf5db1c51b64",
+        "name": "Fernando Mercês",
+        "amount": 2
+      },
+      {
+        "uid": "f50f0f90-7f91-4eaa-8d58-9ea03f8f7cfe",
+        "id": "f50f0f90-7f91-4eaa-8d58-9ea03f8f7cfe",
+        "name": "FreeBSD Brasil",
+        "amount": 1
+      },
+      {
+        "uid": "8b0fd0bd-7171-4bda-b48c-efcd0fac4aa3",
+        "id": "8b0fd0bd-7171-4bda-b48c-efcd0fac4aa3",
+        "name": "Gabriel Barbosa",
+        "amount": 2
+      },
+      {
+        "uid": "dbe58a38-2da7-4d33-a63b-57e5e9d07f15",
+        "id": "dbe58a38-2da7-4d33-a63b-57e5e9d07f15",
+        "name": "Helvio JR - Dobrador de EDR-2",
+        "amount": 2
+      },
+      {
+        "uid": "4aa8bd9e-1aa9-4e2c-9a63-b15af3d8a9c0",
+        "id": "4aa8bd9e-1aa9-4e2c-9a63-b15af3d8a9c0",
+        "name": "Jacomo Piccolini",
+        "amount": 2
+      },
+      {
+        "uid": "f6c61cbc-eee0-4b3d-a33b-7fee0b688197",
+        "id": "f6c61cbc-eee0-4b3d-a33b-7fee0b688197",
+        "name": "Luiz Cabuloso",
+        "amount": 2
+      },
+      {
+        "uid": "8bfcf7b7-b8ef-4ecb-8fe3-d1f8b3dea4c2",
+        "id": "8bfcf7b7-b8ef-4ecb-8fe3-d1f8b3dea4c2",
+        "name": "Marcelo Caiado-4",
+        "amount": 2
+      },
+      {
+        "uid": "1d7c8b7e-ef72-4d2c-8abb-711fec9f0d8d",
+        "id": "1d7c8b7e-ef72-4d2c-8abb-711fec9f0d8d",
+        "name": "Rafael Silva - rfdslabs",
+        "amount": 2
+      },
+      {
+        "uid": "c8c30a83-b0ca-4e42-825c-6c0bfc07a9a9",
+        "id": "c8c30a83-b0ca-4e42-825c-6c0bfc07a9a9",
+        "name": "T50 Creator (Nelson Brito)",
+        "amount": 2
+      },
+      {
+        "uid": "9ccda4f5-4ee5-4f20-9e1c-ff6d8f0cebd5",
+        "id": "9ccda4f5-4ee5-4f20-9e1c-ff6d8f0cebd5",
+        "name": "Tavares, Paladino cibernético",
+        "amount": 2
+      },
+      {
+        "uid": "b5f6bea1-7870-4c0a-8ff7-ea0c4b5c6c26",
+        "id": "b5f6bea1-7870-4c0a-8ff7-ea0c4b5c6c26",
+        "name": "Thais M.",
+        "amount": 2
+      }
+    ]
+  },
+  {
+    "id": "c0ffee00-0000-4000-8000-000000000004",
+    "name": "Hacktivistas",
+    "subtitle": "Vermelho / Verde",
+    "author": "Masters of Pwnage",
+    "author_social": "",
+    "builtin": true,
+    "cards": [
+      {
+        "uid": "4c5c8e6f-ccd1-4cbd-924b-25d89d7f56d5",
+        "id": "4c5c8e6f-ccd1-4cbd-924b-25d89d7f56d5",
+        "name": "Alexandra - Nutcake",
+        "amount": 2
+      },
+      {
+        "uid": "09dda57d-b23c-4de9-b5c7-af96cd797559",
+        "id": "09dda57d-b23c-4de9-b5c7-af96cd797559",
+        "name": "AlligatorCon",
+        "amount": 4
+      },
+      {
+        "uid": "f91eda1e-4754-4d17-b891-d2c51d50f9d2",
+        "id": "f91eda1e-4754-4d17-b891-d2c51d50f9d2",
+        "name": "Antônio coOler",
+        "amount": 2
+      },
+      {
+        "uid": "42b97779-7f9f-4f08-8d12-ef02ae99fada",
+        "id": "42b97779-7f9f-4f08-8d12-ef02ae99fada",
+        "name": "Apura",
+        "amount": 4
+      },
+      {
+        "uid": "5d4a6fe4-0c7f-4ac5-9f9c-7cce4c6fc57f",
+        "id": "5d4a6fe4-0c7f-4ac5-9f9c-7cce4c6fc57f",
+        "name": "Beephish.com-5",
+        "amount": 1
+      },
+      {
+        "uid": "0a9c7d90-5426-4f92-8e0b-b0786baebb54",
+        "id": "0a9c7d90-5426-4f92-8e0b-b0786baebb54",
+        "name": "Black Hat Conference",
+        "amount": 1
+      },
+      {
+        "uid": "8e9a17f2-9e0f-4d06-92ad-67f327e2aa82",
+        "id": "8e9a17f2-9e0f-4d06-92ad-67f327e2aa82",
+        "name": "BrasNET",
+        "amount": 4
+      },
+      {
+        "uid": "2fca0d1e-0f32-4c0a-9a6d-4c97ca63c3fd",
+        "id": "2fca0d1e-0f32-4c0a-9a6d-4c97ca63c3fd",
+        "name": "Bruno Moraes-2",
+        "amount": 2
+      },
+      {
+        "uid": "e09f54e9-e8f0-4c3a-9ca0-3fa0eafb4ed4",
+        "id": "e09f54e9-e8f0-4c3a-9ca0-3fa0eafb4ed4",
+        "name": "BSidesRJ",
+        "amount": 1
+      },
+      {
+        "uid": "7b6de7b7-6b5f-4ae8-83f0-c1d8db9d78c6",
+        "id": "7b6de7b7-6b5f-4ae8-83f0-c1d8db9d78c6",
+        "name": "BSidesSP 20th Edição",
+        "amount": 4
+      },
+      {
+        "uid": "fc352a43-0de2-4bdf-8a2e-49d24ba26e63",
+        "id": "fc352a43-0de2-4bdf-8a2e-49d24ba26e63",
+        "name": "Chuck, Out0fB0und you name it! (Maycon Vitali)",
+        "amount": 2
+      },
+      {
+        "uid": "9640c11e-13c4-4fed-87dc-7ba6a07f2811",
+        "id": "9640c11e-13c4-4fed-87dc-7ba6a07f2811",
+        "name": "Clube dos Mercenários",
+        "amount": 1
+      },
+      {
+        "uid": "6f9f1bcf-af32-4b05-a8e4-ba09e37aef59",
+        "id": "6f9f1bcf-af32-4b05-a8e4-ba09e37aef59",
+        "name": "CryptoRave",
+        "amount": 1
+      },
+      {
+        "uid": "4de5f82b-62fb-4551-9aa2-fa8b02453236",
+        "id": "4de5f82b-62fb-4551-9aa2-fa8b02453236",
+        "name": "Elbert TuxTrack",
+        "amount": 2
+      },
+      {
+        "uid": "2a9a87cc-dd36-43e5-9405-2d8c59b5f57e",
+        "id": "2a9a87cc-dd36-43e5-9405-2d8c59b5f57e",
+        "name": "Espirito Santo",
+        "amount": 2
+      },
+      {
+        "uid": "a9a7be80-7870-4bf9-85c7-d6fec38c1c50",
+        "id": "a9a7be80-7870-4bf9-85c7-d6fec38c1c50",
+        "name": "Felipe Prado-2",
+        "amount": 2
+      },
+      {
+        "uid": "f50f0f90-7f91-4eaa-8d58-9ea03f8f7cfe",
+        "id": "f50f0f90-7f91-4eaa-8d58-9ea03f8f7cfe",
+        "name": "FreeBSD Brasil",
+        "amount": 1
+      },
+      {
+        "uid": "9cbf4b66-52c0-4f9f-872c-5e7c33b4f63e",
+        "id": "9cbf4b66-52c0-4f9f-872c-5e7c33b4f63e",
+        "name": "Laios Barbosa",
+        "amount": 2
+      },
+      {
+        "uid": "da9f1dee-adf6-4589-9a54-0d44c9f53dfe",
+        "id": "da9f1dee-adf6-4589-9a54-0d44c9f53dfe",
+        "name": "Lincoln Werneck",
+        "amount": 2
+      },
+      {
+        "uid": "b0fcb9c8-4b73-4e41-8b59-81fdc61ea211",
+        "id": "b0fcb9c8-4b73-4e41-8b59-81fdc61ea211",
+        "name": "Magno Logan",
+        "amount": 2
+      },
+      {
+        "uid": "7a823a02-f7fd-4d05-aa3f-33598dc04aee",
+        "id": "7a823a02-f7fd-4d05-aa3f-33598dc04aee",
+        "name": "Maycon Vitali",
+        "amount": 2
+      },
+      {
+        "uid": "d2a88fe9-a5a4-4a2b-b731-86ee50787bf0",
+        "id": "d2a88fe9-a5a4-4a2b-b731-86ee50787bf0",
+        "name": "Nash Leon",
+        "amount": 2
+      },
+      {
+        "uid": "6e6da0e6-8425-4e3f-b3c3-47d9c8c5b165",
+        "id": "6e6da0e6-8425-4e3f-b3c3-47d9c8c5b165",
+        "name": "Oliveira Jr.",
+        "amount": 2
+      },
+      {
+        "uid": "c66b6d32-4050-4bf9-abdd-eee34bfc20ec",
+        "id": "c66b6d32-4050-4bf9-abdd-eee34bfc20ec",
+        "name": "Penegui",
+        "amount": 2
+      },
+      {
+        "uid": "07634534-5d05-4b5a-8a67-b52fbd2f10a2",
+        "id": "07634534-5d05-4b5a-8a67-b52fbd2f10a2",
+        "name": "Rafael Capucho",
+        "amount": 2
+      },
+      {
+        "uid": "b83d7a73-ef31-4952-8c55-59f50f0acb67",
+        "id": "b83d7a73-ef31-4952-8c55-59f50f0acb67",
+        "name": "Rafael Choko",
+        "amount": 2
+      },
+      {
+        "uid": "e8bcdef6-9b40-4aab-8cf9-f72dbbcd54c7",
+        "id": "e8bcdef6-9b40-4aab-8cf9-f72dbbcd54c7",
+        "name": "Rafael Granha",
+        "amount": 2
+      },
+      {
+        "uid": "a8f7ed10-9c8b-4943-b0b9-3c81d61b5b6b",
+        "id": "a8f7ed10-9c8b-4943-b0b9-3c81d61b5b6b",
+        "name": "Ranieri Romera",
+        "amount": 2
+      },
+      {
+        "uid": "b3a40ffd-5c14-4b86-b47a-3453f20c79fc",
+        "id": "b3a40ffd-5c14-4b86-b47a-3453f20c79fc",
+        "name": "Rodrigo Jorge",
+        "amount": 2
+      }
+    ]
+  },
+  {
+    "id": "c0ffee00-0000-4000-8000-000000000005",
+    "name": "Purple Team",
+    "subtitle": "Branco / Preto",
+    "author": "Masters of Pwnage",
+    "author_social": "",
+    "builtin": true,
+    "cards": [
+      {
+        "uid": "a4d2bf89-8d74-4f0f-9e76-a471b2f1a61a",
+        "id": "a4d2bf89-8d74-4f0f-9e76-a471b2f1a61a",
+        "name": "Ada Rosenfeld",
+        "amount": 2
+      },
+      {
+        "uid": "09dda57d-b23c-4de9-b5c7-af96cd797559",
+        "id": "09dda57d-b23c-4de9-b5c7-af96cd797559",
+        "name": "AlligatorCon",
+        "amount": 4
+      },
+      {
+        "uid": "3febe20f-42b4-4ed5-a727-97a2cf909eb2",
+        "id": "3febe20f-42b4-4ed5-a727-97a2cf909eb2",
+        "name": "arqu1t3t0s",
+        "amount": 2
+      },
+      {
+        "uid": "3d051e35-6a68-4ba0-a631-e2e5b9e91e8d",
+        "id": "3d051e35-6a68-4ba0-a631-e2e5b9e91e8d",
+        "name": "Ave de Rapina",
+        "amount": 2
+      },
+      {
+        "uid": "5d4a6fe4-0c7f-4ac5-9f9c-7cce4c6fc57f",
+        "id": "5d4a6fe4-0c7f-4ac5-9f9c-7cce4c6fc57f",
+        "name": "Beephish.com-5",
+        "amount": 1
+      },
+      {
+        "uid": "0a9c7d90-5426-4f92-8e0b-b0786baebb54",
+        "id": "0a9c7d90-5426-4f92-8e0b-b0786baebb54",
+        "name": "Black Hat Conference",
+        "amount": 1
+      },
+      {
+        "uid": "c1623c2b-8d0a-4c34-9d6c-f86f4c7e6e8e",
+        "id": "c1623c2b-8d0a-4c34-9d6c-f86f4c7e6e8e",
+        "name": "BSidesJP - BSides João Pessoa",
+        "amount": 4
+      },
+      {
+        "uid": "e09f54e9-e8f0-4c3a-9ca0-3fa0eafb4ed4",
+        "id": "e09f54e9-e8f0-4c3a-9ca0-3fa0eafb4ed4",
+        "name": "BSidesRJ",
+        "amount": 1
+      },
+      {
+        "uid": "7b6de7b7-6b5f-4ae8-83f0-c1d8db9d78c6",
+        "id": "7b6de7b7-6b5f-4ae8-83f0-c1d8db9d78c6",
+        "name": "BSidesSP 20th Edição",
+        "amount": 4
+      },
+      {
+        "uid": "3e24ae74-2d32-4b1e-a4c0-3a7adbf27a7d",
+        "id": "3e24ae74-2d32-4b1e-a4c0-3a7adbf27a7d",
+        "name": "Castra Gemina – Bastião de Vigilância Eterna",
+        "amount": 4
+      },
+      {
+        "uid": "9640c11e-13c4-4fed-87dc-7ba6a07f2811",
+        "id": "9640c11e-13c4-4fed-87dc-7ba6a07f2811",
+        "name": "Clube dos Mercenários",
+        "amount": 1
+      },
+      {
+        "uid": "6f9f1bcf-af32-4b05-a8e4-ba09e37aef59",
+        "id": "6f9f1bcf-af32-4b05-a8e4-ba09e37aef59",
+        "name": "CryptoRave",
+        "amount": 1
+      },
+      {
+        "uid": "dd79a7b8-f582-4f64-9c5d-b3c5d9f33c3f",
+        "id": "dd79a7b8-f582-4f64-9c5d-b3c5d9f33c3f",
+        "name": "CSH-2",
+        "amount": 2
+      },
+      {
+        "uid": "30f0a9e2-65ed-4cc7-b4b8-cd7a94f4a4ae",
+        "id": "30f0a9e2-65ed-4cc7-b4b8-cd7a94f4a4ae",
+        "name": "Cult of Dead Cow",
+        "amount": 2
+      },
+      {
+        "uid": "2ddad5e5-78b1-4d88-b343-ebb58df3dc4d",
+        "id": "2ddad5e5-78b1-4d88-b343-ebb58df3dc4d",
+        "name": "Daniel Gomes",
+        "amount": 2
+      },
+      {
+        "uid": "cfa99bc7-8b6e-4c0d-ac37-e5cd47d74f1d",
+        "id": "cfa99bc7-8b6e-4c0d-ac37-e5cd47d74f1d",
+        "name": "Endrigo Antonini",
+        "amount": 2
+      },
+      {
+        "uid": "bb4bb6e6-9e2e-4b94-ad9b-4ee8dbd7b0f5",
+        "id": "bb4bb6e6-9e2e-4b94-ad9b-4ee8dbd7b0f5",
+        "name": "Ertffin, Defensor de Redes",
+        "amount": 2
+      },
+      {
+        "uid": "9d12da8c-02e4-4389-a2a2-61eac7d25b79",
+        "id": "9d12da8c-02e4-4389-a2a2-61eac7d25b79",
+        "name": "Eva Pereira",
+        "amount": 2
+      },
+      {
+        "uid": "f8c42b4c-6b41-4cad-b67c-cf5db1c51b64",
+        "id": "f8c42b4c-6b41-4cad-b67c-cf5db1c51b64",
+        "name": "Fernando Mercês",
+        "amount": 2
+      },
+      {
+        "uid": "f50f0f90-7f91-4eaa-8d58-9ea03f8f7cfe",
+        "id": "f50f0f90-7f91-4eaa-8d58-9ea03f8f7cfe",
+        "name": "FreeBSD Brasil",
+        "amount": 1
+      },
+      {
+        "uid": "8b0fd0bd-7171-4bda-b48c-efcd0fac4aa3",
+        "id": "8b0fd0bd-7171-4bda-b48c-efcd0fac4aa3",
+        "name": "Gabriel Barbosa",
+        "amount": 2
+      },
+      {
+        "uid": "c8d5b8fc-27c4-4c86-940c-ff34d4e88d51",
+        "id": "c8d5b8fc-27c4-4c86-940c-ff34d4e88d51",
+        "name": "Glauco Sampaio-2",
+        "amount": 2
+      },
+      {
+        "uid": "2bc3c9eb-fd67-4b1d-aefe-0f7d44a77197",
+        "id": "2bc3c9eb-fd67-4b1d-aefe-0f7d44a77197",
+        "name": "Hacker Rangers",
+        "amount": 2
+      },
+      {
+        "uid": "dbe58a38-2da7-4d33-a63b-57e5e9d07f15",
+        "id": "dbe58a38-2da7-4d33-a63b-57e5e9d07f15",
+        "name": "Helvio JR - Dobrador de EDR-2",
+        "amount": 2
+      },
+      {
+        "uid": "b2e0d0ef-2a39-4acb-857b-c3d7b69c0a81",
+        "id": "b2e0d0ef-2a39-4acb-857b-c3d7b69c0a81",
+        "name": "Juliana D'addio",
+        "amount": 2
+      },
+      {
+        "uid": "8bfcf7b7-b8ef-4ecb-8fe3-d1f8b3dea4c2",
+        "id": "8bfcf7b7-b8ef-4ecb-8fe3-d1f8b3dea4c2",
+        "name": "Marcelo Caiado-4",
+        "amount": 2
+      },
+      {
+        "uid": "c9efeaf0-ed3d-4da7-b6c8-41d8b8a19e13",
+        "id": "c9efeaf0-ed3d-4da7-b6c8-41d8b8a19e13",
+        "name": "Matheus - O voluntário",
+        "amount": 2
+      },
+      {
+        "uid": "ecb7ab1a-79f2-4704-ac11-b7f19417deaa",
+        "id": "ecb7ab1a-79f2-4704-ac11-b7f19417deaa",
+        "name": "Nelson Novaes Neto-2",
+        "amount": 2
+      },
+      {
+        "uid": "b4f9bdea-cdf7-42cb-8e0c-3da116743e14",
+        "id": "b4f9bdea-cdf7-42cb-8e0c-3da116743e14",
+        "name": "Pimps, Manipulador de Bytecodes",
+        "amount": 2
+      }
+    ]
+  },
+  {
+    "id": "c0ffee00-0000-4000-8000-000000002024",
+    "name": "Deck campeão H2HC 2024",
+    "subtitle": "Deck campeão",
+    "author": "",
+    "author_social": "",
+    "builtin": true,
+    "cards": [
+      {
+        "uid": "44ae4f2e-0dc2-4a87-8ed6-a32a4c0e4a8d",
+        "id": "44ae4f2e-0dc2-4a87-8ed6-a32a4c0e4a8d",
+        "name": "RedZone",
+        "amount": 10
+      },
+      {
+        "uid": "ccc0a5db-cc2a-4d2c-9ff7-39c6f89dcdff",
+        "id": "ccc0a5db-cc2a-4d2c-9ff7-39c6f89dcdff",
+        "name": "Garoa Hacker Clube",
+        "amount": 3
+      },
+      {
+        "uid": "e4da8495-6e21-494d-83c1-68570a2a89da",
+        "id": "e4da8495-6e21-494d-83c1-68570a2a89da",
+        "name": "Hakai",
+        "amount": 3
+      },
+      {
+        "uid": "71c68d19-b99b-4c8f-b992-2f956f7fff46",
+        "id": "71c68d19-b99b-4c8f-b992-2f956f7fff46",
+        "name": "Hackers to Hackers Conference (H2HC)",
+        "amount": 3
+      },
+      {
+        "uid": "6419f5c0-fda6-4f59-8155-df3ad7e3b22a",
+        "id": "6419f5c0-fda6-4f59-8155-df3ad7e3b22a",
+        "name": "Security BSides São Paulo (BSidesSP)",
+        "amount": 3
+      },
+      {
+        "uid": "7e0bcc66-4f6c-4f9e-8ed3-d703395f1c3b",
+        "id": "7e0bcc66-4f6c-4f9e-8ed3-d703395f1c3b",
+        "name": "Daiane, Nascida Da Lótus Negra",
+        "amount": 3
+      },
+      {
+        "uid": "8748c2eb-6d69-4fc3-9174-b46fce7ae52b",
+        "id": "8748c2eb-6d69-4fc3-9174-b46fce7ae52b",
+        "name": "Lucas Teske",
+        "amount": 3
+      }
+    ]
+  }
+]

@@ -1,0 +1,17 @@
+# Build context for the Dockerfile: sources + official cards/images only.
+node_modules
+server/node_modules
+server/data
+dist
+.git
+.github
+.claude
+game
+tests
+public/cards.json
+public/image
+public/thumb
+**/*.tmp
+**/.DS_Store
+pentest
+.anim-work

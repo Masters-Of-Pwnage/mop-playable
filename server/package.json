@@ -1,0 +1,21 @@
+{
+  "name": "mop-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Masters of Pwnage: hospeda o jogo web e o lobby online (salas públicas/particulares) via WebSocket",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.1.5",
+    "fastify": "^5.12.7",
+    "jose": "^6.2.14",
+    "ws": "^8.21.0"
+  }
+}

@@ -1,0 +1,4 @@
+[
+  { "name": "Inicial A", "cards": [{ "uid": "c-common", "amount": 4 }, { "uid": "c-land", "amount": 10 }] },
+  { "name": "Inicial B", "cards": [{ "uid": "c-common2", "amount": 4 }, { "uid": "c-land", "amount": 12 }, { "uid": "missing", "amount": 2 }] }
+]
